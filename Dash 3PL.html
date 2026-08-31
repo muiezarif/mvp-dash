@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dash 3PL — Sahel Logistics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Archivo:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<link rel="stylesheet" href="tpl/tpl.css">
+<link rel="stylesheet" href="auth.css">
+<style>:root{--a-acc:#E5E57C}</style>
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#C0D2FF"/><text x="50" y="46" font-family="Impact,sans-serif" font-size="21" fill="#0B0B0B" text-anchor="middle">DASH</text><text x="50" y="64" font-family="monospace" font-size="11" fill="#0B0B0B" text-anchor="middle">3PL</text></svg>
+</template>
+</head>
+<body>
+<div class="app">
+  <aside id="side"></aside>
+  <div class="main">
+    <header class="top">
+      <button class="burger" type="button" onclick="document.getElementById('side').classList.toggle('open')">Menu</button>
+      <span id="crumb"></span>
+      <span class="top-sp"></span>
+      <span class="top-live"><i></i>Sahel OMS connected · Riyadh 15:48</span>
+    </header>
+    <main id="view"></main>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<script src="tpl/data.js"></script>
+<script src="tpl/ui.js"></script>
+<script src="tpl/map.js"></script>
+<script src="tpl/screens-ops.js"></script>
+<script src="tpl/screens-commercial.js"></script>
+<script src="tpl/screens-admin.js"></script>
+<script src="tpl/app.js"></script>
+<script>window.AUTH_CFG = {
+  key:'tpl', product:'3PL', accent:'#E5E57C',
+  head:'The work<br><span>Dash sent<br>you.</span>',
+  sub:'A window into the orders that arrived through the platform — Direct, Marketplace and Dash Network. Your own system stays in charge of dispatching them.',
+  facts:[['This portal','Read only for live orders — your system is the source of truth'],
+    ['Your system','Accepts and updates orders through the API'],
+    ['Three sources','Different commercial terms, kept apart on every screen']],
+  foot:'Sahel Logistics · Riyadh',
+  eyebrow:'Provider sign in', title:'Sign in', cta:'Sign in',
+  desc:'This is the portal, not the API. Your integration authenticates separately with its own key and never uses these credentials.',
+  emailHint:'Your email resolves the company and what you are allowed to read.',
+  sso:null, twofa:false,
+  accounts:[
+    { email:'ops@sahellogistics.sa', label:'Operations', state:'ok', name:'Ziyad Al Ghamdi', role:'Operations',
+      scope:[['Company','Sahel Logistics Company'],['Role','Operations — read live orders, manage listings and clients'],
+        ['Live orders','Read only, here and everywhere in this portal'],['API key','Separate credential, managed under Integration']] },
+    { email:'finance@sahellogistics.sa', label:'Finance', state:'ok', name:'Hind Al Subaie', role:'Finance',
+      scope:[['Company','Sahel Logistics Company'],['Role','Finance — settlement, invoices, commission reconciliation'],
+        ['Live orders','Visible, not actionable'],['Cannot','Edit listings or client contracts']] },
+    { email:'ops@masarexpress.sa', label:'Awaiting approval', state:'pending', name:'Masar Express', role:'Owner',
+      scope:[['Company','Masar Express'],['Applied','28 Aug 2026'],['Status','Verified — Network role under review']] }],
+  states:{
+    pending:{ eyebrow:'Network role under review', title:'Verified, not joined', tone:'warn',
+      body:'Masar Express is a verified company, so you can sign in and set up your listing. Receiving Dash Network work is a separate approval and Dash has not decided yet.',
+      list:['Company verification — approved','Marketplace listing — draft, yours to publish','Dash Network supply role — pending Dash review'],
+      enter:'Continue to the portal', note:'Approval for the Network is judged on coverage and capacity, not on paperwork.' }}
+};</script>
+<script src="auth.js"></script>
+</body>
+</html>

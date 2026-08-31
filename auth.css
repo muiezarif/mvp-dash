@@ -1,0 +1,111 @@
+/* Dash — shared sign-in. Same shell across the four products, configured per product. */
+:root{--a-line:#E4E2DD;--a-line2:#EFEDE8;--a-dim:#6E6E6E;--a-faint:#9A9A9A;
+  --a-mono:ui-monospace,Menlo,Consolas,monospace;--a-body:'Archivo',system-ui,sans-serif}
+body.authing{overflow:hidden}
+body.authing .app{display:none}
+
+.auth{position:fixed;inset:0;z-index:9000;display:grid;grid-template-columns:1.05fr 1fr;
+  background:#fff;font-family:var(--a-body);color:#0B0B0B;-webkit-font-smoothing:antialiased}
+
+/* left: who you are about to sign in to */
+.auth-l{background:#0B0B0B;color:#fff;padding:46px 52px;display:flex;flex-direction:column;
+  position:relative;overflow:hidden}
+.auth-l:after{content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:26px 100%}
+.auth-brand{display:flex;align-items:center;gap:9px;font-family:'Bebas Neue',Impact,sans-serif;
+  font-size:27px;letter-spacing:.05em;line-height:1}
+.auth-brand i{width:5px;height:5px;background:var(--a-acc);display:block;border-radius:50%}
+.auth-brand em{font-style:normal;font-family:var(--a-mono);font-size:9.5px;font-weight:600;
+  letter-spacing:.22em;color:var(--a-acc);align-self:flex-end;padding-bottom:2px}
+.auth-h{margin:auto 0 0;max-width:19ch;font-family:'Bebas Neue',Impact,sans-serif;font-size:66px;
+  line-height:.92;letter-spacing:.005em;text-transform:uppercase}
+.auth-h span{color:var(--a-acc)}
+.auth-sub{margin:16px 0 0;max-width:42ch;font-size:13.5px;line-height:1.6;color:#B4B4B4;text-wrap:pretty}
+.auth-facts{margin:34px 0 0;border-top:1px solid #262626;display:grid;gap:0}
+.auth-fact{display:grid;grid-template-columns:104px minmax(0,1fr);gap:14px;padding:11px 0;
+  border-bottom:1px solid #1D1D1D;align-items:baseline}
+.auth-fact b{font-family:var(--a-mono);font-size:9px;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:#7E7E7E}
+.auth-fact span{font-size:12.5px;color:#E2E2E2;line-height:1.5}
+.auth-foot{margin-top:26px;font-family:var(--a-mono);font-size:9.5px;letter-spacing:.1em;color:#5E5E5E}
+
+/* right: the form */
+.auth-r{display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;
+  align-content:safe center;padding:40px;overflow:auto}
+.auth-card{width:100%;max-width:388px}
+.auth-eyebrow{font-family:var(--a-mono);font-size:9.5px;font-weight:600;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--a-faint)}
+.auth-t{margin:9px 0 4px;font-family:'Bebas Neue',Impact,sans-serif;font-size:34px;line-height:1;
+  letter-spacing:.01em;text-transform:uppercase}
+.auth-d{margin:0 0 22px;font-size:12.5px;line-height:1.6;color:var(--a-dim)}
+.auth-f{margin-bottom:13px}
+.auth-f>label{display:block;font-family:var(--a-mono);font-size:9px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--a-dim);margin-bottom:5px}
+.auth-in{width:100%;box-sizing:border-box;border:1px solid var(--a-line);background:#fff;
+  padding:10px 11px;font:400 13px var(--a-body);color:#0B0B0B;outline:none;border-radius:0}
+.auth-in:focus{border-color:#0B0B0B;box-shadow:inset 0 0 0 1px #0B0B0B}
+.auth-in.bad{border-color:#C8391B;box-shadow:inset 0 0 0 1px #C8391B}
+.auth-hint{margin-top:5px;font-size:11px;color:var(--a-faint);line-height:1.5}
+.auth-row{display:flex;align-items:center;gap:10px;justify-content:space-between;margin:4px 0 18px}
+.auth-chk{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--a-dim);cursor:pointer}
+.auth-chk input{accent-color:#0B0B0B;width:14px;height:14px}
+.auth-link{font-size:12px;color:#0B0B0B;text-decoration:none;border-bottom:1px solid var(--a-line)}
+.auth-link:hover{border-bottom-color:#0B0B0B}
+.auth-btn{width:100%;border:1px solid #0B0B0B;background:#0B0B0B;color:#fff;padding:11px 14px;
+  font:600 11px var(--a-mono);letter-spacing:.13em;text-transform:uppercase;cursor:pointer}
+.auth-btn:hover{background:#242424}
+.auth-btn.ghost{background:#fff;color:#0B0B0B;margin-top:8px}
+.auth-btn.ghost:hover{background:#F4F2ED}
+.auth-btn[disabled]{opacity:.4;cursor:not-allowed}
+.auth-or{display:flex;align-items:center;gap:10px;margin:18px 0;font:600 9px var(--a-mono);
+  letter-spacing:.14em;color:var(--a-faint);text-transform:uppercase}
+.auth-or:before,.auth-or:after{content:'';height:1px;background:var(--a-line2);flex:1}
+
+/* resolved identity — permission decides the scope, no picker */
+.auth-who{border:1px solid var(--a-line);border-left:3px solid var(--a-acc);background:#FCFBF9;
+  padding:11px 12px;margin:0 0 15px}
+.auth-who b{display:block;font-size:13px;margin-bottom:2px}
+.auth-who dl{margin:7px 0 0;display:grid;grid-template-columns:96px minmax(0,1fr);gap:4px 10px}
+.auth-who dt{font-family:var(--a-mono);font-size:9px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--a-faint)}
+.auth-who dd{margin:0;font-size:11.5px;color:#2A2A2A;line-height:1.45}
+.auth-who .rs{font-family:var(--a-mono);font-size:9px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--a-dim);display:block;margin-bottom:7px}
+
+/* blocked states */
+.auth-state{border:1px solid var(--a-line);padding:14px;margin-bottom:16px;background:#FCFBF9}
+.auth-state.warn{border-left:3px solid #FFCC99}
+.auth-state.stop{border-left:3px solid #FCA38B}
+.auth-state b{display:block;font-size:13px;margin-bottom:5px}
+.auth-state p{margin:0;font-size:12px;line-height:1.6;color:var(--a-dim);text-wrap:pretty}
+.auth-state ul{margin:9px 0 0;padding-left:16px;font-size:12px;line-height:1.7;color:var(--a-dim)}
+.auth-err{background:#FDF0EC;border:1px solid #F3CFC4;border-left:3px solid #C8391B;padding:10px 12px;
+  margin-bottom:14px;font-size:12px;line-height:1.55;color:#8E2A13}
+
+/* 2FA */
+.auth-code{display:flex;gap:8px}
+.auth-code input{width:100%;text-align:center;font:500 20px var(--a-mono);letter-spacing:.1em;
+  padding:12px 0;border:1px solid var(--a-line);background:#fff;outline:none}
+.auth-code input:focus{border-color:#0B0B0B;box-shadow:inset 0 0 0 1px #0B0B0B}
+.auth-back{background:none;border:none;padding:0;margin-top:14px;font:600 10px var(--a-mono);
+  letter-spacing:.12em;text-transform:uppercase;color:var(--a-dim);cursor:pointer}
+.auth-back:hover{color:#0B0B0B}
+
+/* demo state switcher — prototype affordance, labelled as such */
+.auth-demo{margin-top:26px;border-top:1px solid var(--a-line2);padding-top:14px}
+.auth-demo>span{display:block;font:600 9px var(--a-mono);letter-spacing:.13em;text-transform:uppercase;
+  color:var(--a-faint);margin-bottom:8px}
+.auth-demo-b{display:flex;flex-wrap:wrap;gap:6px}
+.auth-demo-b button{border:1px solid var(--a-line);background:#fff;padding:5px 9px;
+  font:500 10.5px var(--a-body);color:var(--a-dim);cursor:pointer}
+.auth-demo-b button:hover{border-color:#0B0B0B;color:#0B0B0B}
+.auth-demo-b button.on{background:#0B0B0B;border-color:#0B0B0B;color:#fff}
+.auth-note{margin-top:11px;font-size:11px;line-height:1.55;color:var(--a-faint)}
+
+@media (max-width:900px){
+  .auth{grid-template-columns:minmax(0,1fr);overflow:auto}
+  .auth-l{padding:30px 26px 26px}
+  .auth-h{font-size:44px;margin-top:26px}
+  .auth-facts{display:none}
+  .auth-r{padding:26px}
+}

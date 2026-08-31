@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dash Driver App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Archivo:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<link rel="stylesheet" href="driver/driver.css">
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#0B0B0B"/><rect x="34" y="20" width="32" height="60" fill="none" stroke="#fff" stroke-width="2"/><rect x="40" y="44" width="20" height="6" fill="#FFEE50"/></svg>
+</template>
+</head>
+<body>
+<div class="desk">
+  <div class="deskinfo">
+    <div class="dw"><b>DASH</b><i></i><span>DRIVER APP</span></div>
+    <p>What a Rehla Fleet driver carries. Invite-based, operational, no earnings negotiation — receive, deliver, update.</p>
+    <div class="dl">Screens</div>
+    <div class="deskmenu">
+      <button class="dm" data-a="go" data-v="login"><span>Login</span><em>01</em></button>
+      <button class="dm" data-a="go" data-v="home"><span>Home — timeline</span><em>02 · 03</em></button>
+      <button class="dm" data-a="order" data-v="DX-40918"><span>Order · in progress</span><em>04</em></button>
+      <button class="dm" data-a="order" data-v="DX-40874"><span>Order · scheduled</span><em>03 · 04</em></button>
+      <button class="dm" data-a="go" data-v="map"><span>Navigation</span><em>05</em></button>
+      <button class="dm" data-a="go" data-v="chat"><span>Dispatcher chat</span><em>06</em></button>
+      <button class="dm" data-a="go" data-v="wallet"><span>Wallet</span><em>07</em></button>
+      <button class="dm" data-a="go" data-v="history"><span>Order history</span><em>08</em></button>
+      <button class="dm" data-a="go" data-v="profile"><span>Profile</span><em>09</em></button>
+      <button class="dm" data-a="go" data-v="notifications"><span>Notifications</span><em>10</em></button>
+      <button class="dm" data-a="go" data-v="more"><span>More — office rules</span><em>02</em></button>
+    </div>
+    <div class="policy">Slide the status bar on an order to move it through the flow. At the door it asks for the proof your office required, and refuses to finish without it.</div>
+  </div>
+
+  <div class="frame">
+    <div class="screen" id="screen"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<script src="driver/data.js"></script>
+<script src="driver/app.js"></script>
+</body>
+</html>

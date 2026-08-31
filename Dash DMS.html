@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dash DMS — Rehla Fleet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Archivo:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<link rel="stylesheet" href="dms/dms.css">
+<link rel="stylesheet" href="auth.css">
+<style>:root{--a-acc:#C0D2FF}</style>
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#0B0B0B"/><text x="50" y="46" font-family="Impact,sans-serif" font-size="22" fill="#fff" text-anchor="middle">DASH</text><text x="50" y="64" font-family="monospace" font-size="10" fill="#FFEE50" text-anchor="middle">DMS</text></svg>
+</template>
+</head>
+<body>
+<div class="app">
+  <aside id="side"></aside>
+  <div class="main">
+    <header class="top">
+      <button class="burger" type="button" onclick="document.getElementById('side').classList.toggle('open')">Menu</button>
+      <span id="crumb"></span>
+      <span class="top-sp"></span>
+      <span class="top-live"><i></i>Live · Riyadh 15:48</span>
+    </header>
+    <main id="view"></main>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<script src="dms/data.js"></script>
+<script src="dms/ui.js"></script>
+<script src="dms/map.js"></script>
+<script src="dms/screens-ops.js"></script>
+<script src="dms/screens-orders.js"></script>
+<script src="dms/screens-fleet.js"></script>
+<script src="dms/screens-settings.js"></script>
+<script src="dms/screens-network.js"></script>
+<script src="dms/screens-admin.js"></script>
+<script src="dms/app.js"></script>
+<script>window.AUTH_CFG = {
+  key:'dms', product:'DMS', accent:'#C0D2FF',
+  head:'Your fleet.<br><span>Your rules.</span><br>One board.',
+  sub:'Dash DMS runs a delivery operation end to end — dispatchers, drivers, zones, contracts and wallets. Your day starts on the control tower.',
+  facts:[['Scope','Your company and the branches your role covers'],
+    ['Drivers','Employees, contractors and the freelancers you accept'],
+    ['Demand','Your own merchants, plus anything Dash Network sends you']],
+  foot:'Rehla Fleet · Riyadh',
+  eyebrow:'Operator sign in', title:'Sign in', cta:'Sign in',
+  desc:'Your role decides which board you land on. A dispatcher opens the control tower; a finance user opens billing.',
+  emailHint:'Your email resolves the company, the role and the zones you dispatch for.',
+  sso:'Continue with single sign on', twofa:false,
+  accounts:[
+    { email:'dispatch@rehlafleet.sa', label:'Dispatcher', state:'ok', name:'Maha Al Qahtani', role:'Dispatcher',
+      scope:[['Company','Rehla Fleet Company'],['Role','Dispatcher — assign, reassign, cancel, contact drivers'],
+        ['Zones','All five Riyadh zones'],['Cannot','Change contracts, run payouts, or edit pricing']] },
+    { email:'finance@rehlafleet.sa', label:'Finance', state:'ok', name:'Bader Al Otaibi', role:'Finance',
+      scope:[['Company','Rehla Fleet Company'],['Role','Finance — invoices, driver wallets, payouts'],
+        ['Zones','Reporting across all zones'],['Cannot','Touch a live order or reassign a driver']] },
+    { email:'ops@tayarexpress.sa', label:'Pending verification', state:'pending', name:'Tayar Express', role:'Owner',
+      scope:[['Company','Tayar Express'],['Signed up','27 Aug 2026'],['Documents','One rejected']] }],
+  states:{
+    pending:{ eyebrow:'Verification blocked', title:'One document back', tone:'warn',
+      body:'Your commercial registration came through unreadable, so verification is on hold. Everything else was accepted. Rescan it and Dash reviews the same day.',
+      list:['Commercial registration — unreadable, resubmit','VAT certificate — accepted','Municipality licence — accepted'],
+      enter:'Continue to resubmit', note:'You can resubmit as many times as you need. Nothing else is affected.' }}
+};</script>
+<script src="auth.js"></script>
+</body>
+</html>

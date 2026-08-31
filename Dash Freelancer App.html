@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dash Freelancer App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Archivo:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<link rel="stylesheet" href="freelancer/freelancer.css">
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#0B0B0B"/><rect x="34" y="20" width="32" height="60" fill="none" stroke="#fff" stroke-width="2"/><text x="50" y="56" font-family="Impact,sans-serif" font-size="15" fill="#FFEE50" text-anchor="middle">SAR</text></svg>
+</template>
+</head>
+<body>
+<div class="desk">
+  <div class="deskinfo">
+    <div class="dw"><b>DASH</b><i></i><span>FREELANCER</span></div>
+    <p>For independent drivers. Self signup, approved by Dash, plugged straight into Dash Network. On-demand offers only — no shifts, no dispatcher, no roster.</p>
+    <div class="dl">Screens</div>
+    <div class="deskmenu">
+      <button class="dm" data-a="go" data-v="signup"><span>Approval and documents</span><em>01 · 02</em></button>
+      <button class="dm" data-a="go" data-v="home"><span>Home — online, listening</span><em>03 · 05</em></button>
+      <button class="dm" data-a="go" data-v="offer"><span>Show the live offer</span><em>04</em></button>
+      <button class="dm" data-a="go" data-v="map"><span>Navigation</span><em>07</em></button>
+      <button class="dm" data-a="go" data-v="home"><span>Current job — accept an offer</span><em>06</em></button>
+
+      <button class="dm" data-a="go" data-v="chat"><span>Dash Support</span><em>08</em></button>
+      <button class="dm" data-a="go" data-v="wallet"><span>Wallet and withdraw</span><em>09</em></button>
+      <button class="dm" data-a="go" data-v="history"><span>Order history</span><em>10</em></button>
+      <button class="dm" data-a="go" data-v="profile"><span>Profile</span><em>11</em></button>
+      <button class="dm" data-a="go" data-v="notifications"><span>Notifications</span><em>12</em></button>
+      <button class="dm" data-a="go" data-v="more"><span>More — your terms</span><em>03</em></button>
+    </div>
+    <div class="policy">Offers arrive by themselves while you are online — a full-screen takeover with the fare and a 20-second timer. Accept, skip, or let it expire; the next one follows a few seconds later.</div>
+  </div>
+
+  <div class="frame">
+    <div class="screen" id="screen"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<script src="freelancer/data.js"></script>
+<script src="freelancer/app.js"></script>
+</body>
+</html>

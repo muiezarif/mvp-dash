@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dash Admin — platform control plane</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Archivo:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<link rel="stylesheet" href="admin/admin.css">
+<link rel="stylesheet" href="auth.css">
+<style>:root{--a-acc:#FFEE50}</style>
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#0B0B0B"/><text x="50" y="46" font-family="Impact,sans-serif" font-size="21" fill="#FFEE50" text-anchor="middle">DASH</text><text x="50" y="64" font-family="monospace" font-size="10" fill="#FCA38B" text-anchor="middle">ADMIN</text></svg>
+</template>
+</head>
+<body>
+<div class="app">
+  <aside id="side"></aside>
+  <div class="main">
+    <header class="top">
+      <button class="burger" type="button" onclick="document.getElementById('side').classList.toggle('open')">Menu</button>
+      <span id="crumb"></span>
+      <span class="top-sp"></span>
+      <span class="top-live"><i></i>Network on · 42 orders routing · 15:48</span>
+    </header>
+    <main id="view"></main>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<script src="admin/data.js"></script>
+<script src="admin/ui.js"></script>
+<script src="admin/map.js"></script>
+<script src="admin/screens-ops.js"></script>
+<script src="admin/screens-network.js"></script>
+<script src="admin/screens-clients.js"></script>
+<script src="admin/screens-admin.js"></script>
+<script src="admin/app.js"></script>
+<script>window.AUTH_CFG = {
+  key:'admin', product:'ADMIN', accent:'#FFEE50',
+  head:'Everything.<br><span>All of it.</span><br>At once.',
+  sub:'The platform control plane — every client, every order, every riyal. Staff only. What you can do inside depends on your role, and the destructive controls sit with Super Admin alone.',
+  facts:[['Access','Dash employees only — clients never reach this'],
+    ['Two factor','Mandatory, no exceptions, no grace period'],
+    ['Every action','Written to an append-only audit log with your name on it']],
+  foot:'Dash Platform · internal',
+  eyebrow:'Internal — staff only', title:'Staff sign in', cta:'Continue',
+  desc:'Two steps. Password, then a code from your authenticator app.',
+  emailHint:'Your dash.sa address resolves your role and everything it permits.',
+  sso:'Continue with Dash SSO', twofa:true,
+  accounts:[
+    { email:'dana@dash.sa', label:'Super Admin', state:'ok', name:'Dana Al Rashed', role:'Super Admin',
+      scope:[['Role','Super Admin — full platform authority'],
+        ['Can','Suspend clients, rule disputes, change commission, switch Dash Network off'],
+        ['Two factor','Enrolled'],['Audit','Every action logged under your name']] },
+    { email:'khalid@dash.sa', label:'Operations', state:'ok', name:'Khalid Al Anzi', role:'Operations',
+      scope:[['Role','Operations — run the network day to day'],
+        ['Can','Reassign Network orders, approve join requests, handle escalations'],
+        ['Cannot','Turn Dash Network off, rule a dispute, or change a price'],['Two factor','Enrolled']] },
+    { email:'noura@dash.sa', label:'Two factor missing', state:'enrol', name:'Noura Al Harbi', role:'Support',
+      scope:[['Role','Support — tickets and the customer directory'],['Two factor','Not enrolled']] }],
+  states:{
+    enrol:{ eyebrow:'Two factor required', title:'Set it up first', tone:'stop',
+      body:'Your Support role can read the customer directory across every client on the platform. Sign in stays closed until two factor is enrolled — there is no way to postpone this.',
+      list:['Scan the QR in your authenticator app','Enter the first code to confirm','Store the recovery codes somewhere that is not this laptop'],
+      enter:'Start enrolment', note:'Flagged to Dana Al Rashed on the team screen until it is done.' }}
+};</script>
+<script src="auth.js"></script>
+</body>
+</html>

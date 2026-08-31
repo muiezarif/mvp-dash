@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dash Merchant — Kanz Market</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Archivo:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<link rel="stylesheet" href="merchant/merchant.css">
+<link rel="stylesheet" href="auth.css">
+<style>:root{--a-acc:#FFCC99}</style>
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#FFCC99"/><text x="50" y="46" font-family="Impact,sans-serif" font-size="21" fill="#0B0B0B" text-anchor="middle">DASH</text><text x="50" y="64" font-family="monospace" font-size="9" fill="#0B0B0B" text-anchor="middle">MERCHANT</text></svg>
+</template>
+</head>
+<body>
+<div class="app">
+  <aside id="side"></aside>
+  <div class="main">
+    <header class="top">
+      <button class="burger" type="button" onclick="document.getElementById('side').classList.toggle('open')">Menu</button>
+      <span id="crumb"></span>
+      <span class="top-sp"></span>
+      <span class="top-live"><i></i>Live · Riyadh 15:48</span>
+    </header>
+    <main id="view"></main>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<script src="merchant/data.js"></script>
+<script src="merchant/ui.js"></script>
+<script src="merchant/map.js"></script>
+<script src="merchant/screens-ops.js"></script>
+<script src="merchant/screens-orders.js"></script>
+<script src="merchant/screens-dispatch.js"></script>
+<script src="merchant/screens-admin.js"></script>
+<script src="merchant/app.js"></script>
+<script>window.AUTH_CFG = {
+  key:'merchant', product:'MERCHANT', accent:'#FFCC99',
+  head:'Send it.<br><span>Watch it.</span><br>Done.',
+  sub:'Your storefront hands the order to Dash. From there you watch it move and escalate if it drifts — you never dispatch, and you never chase a driver yourself.',
+  facts:[['Branches','Scope comes from your permission, not a picker'],
+    ['Fulfilment','Dash Network and your connected 3PLs'],
+    ['Integrations','Salla, Shopify, your ERP, or manual entry']],
+  foot:'Kanz Trading Company · Riyadh',
+  eyebrow:'Merchant sign in', title:'Sign in', cta:'Sign in',
+  desc:'One email, one scope. What you can see is already decided by the permission your organisation gave you.',
+  emailHint:'Your email tells us the merchant and the branches you cover. Nothing to choose.',
+  sso:'Continue with Google Workspace', twofa:false,
+  accounts:[
+    { email:'ops@kanzmarket.sa', label:'All branches', state:'ok', name:'Salma Al Dossari', role:'Operations manager',
+      scope:[['Merchant','Kanz Trading Company · Kanz Market'],['Branches','All four — Hittin, Al Yasmin, Olaya, Al Malqa'],
+        ['Role','Operations manager — create, watch, escalate, edit dispatch rules'],['City','Riyadh']] },
+    { email:'olaya@kanzmarket.sa', label:'One branch only', state:'ok', name:'Omar Sabri', role:'Branch manager',
+      scope:[['Merchant','Kanz Trading Company · Kanz Market'],['Branches','Olaya only'],
+        ['Role','Branch manager — create and watch his own orders'],['Cannot','See other branches, or change dispatch rules']] },
+    { email:'ops@tamrapharmacy.sa', label:'Pending verification', state:'pending', name:'Tamra Pharmacy', role:'Owner',
+      scope:[['Merchant','Tamra Trading · Tamra Pharmacy'],['Signed up','29 Aug 2026'],['Documents','Two of four received']] },
+    { email:'ops@nuqta.sa', label:'Suspended', state:'suspended', name:'Nuqta Coffee', role:'Owner',
+      scope:[['Merchant','Nuqta Coffee Roasters'],['Suspended','24 Aug 2026'],['Reason','Wallet balance SAR −320']] }],
+  states:{
+    pending:{ eyebrow:'Account not verified yet', title:'Almost there', tone:'warn',
+      body:'Your account exists and you can sign in, but sending orders is switched off until Dash verifies the business. Two documents are still outstanding.',
+      list:['Commercial registration — received','VAT certificate — received','Municipality licence — waiting','Bank letter — waiting'],
+      enter:'Continue to document upload', note:'Verification usually takes under a working day once all four are in.' },
+    suspended:{ eyebrow:'Account suspended', title:'Suspended', tone:'stop',
+      body:'Nuqta Coffee was suspended on 24 August. Orders already in flight finished normally, but nothing new can be sent and sign in is blocked until the wallet balance is settled.',
+      list:['Outstanding to Dash — SAR 320','Contact — finance@dash.sa'],
+      enter:null, note:'Only Dash can lift a suspension. Your own team cannot undo it.' }}
+};</script>
+<script src="auth.js"></script>
+</body>
+</html>
