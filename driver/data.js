@@ -114,11 +114,19 @@ window.DRV = (function () {
     { k:'System', t:'App updated to 3.4.1 — faster proof of delivery upload', d:'26 Aug', sev:'low', link:'profile' }
   ];
 
+  const ISSUES = [
+    { id:'IC-3129', order:'DX-40874', reason:'Merchant delay or order not ready', note:'Counter said ten more minutes', at:'Yesterday 18:22',
+      state:'Resolved', owner:'Mishal · Dispatcher', reply:'Merchant confirmed ready — collected at 18:41', closed:'Yesterday 18:39' }
+  ];
+
   const REASONS = {
+    issue: ['Customer unavailable or cannot contact customer', 'Merchant delay or order not ready',
+            'Wrong address or customer changed location', 'Vehicle problem or accident',
+            'Order or item issue', 'COD or payment issue', 'Other'],
     cancel: ['Merchant cancelled', 'Wrong or incomplete address', 'Customer refused the order', 'Vehicle problem', 'Order not ready at pickup'],
     fail: ['Customer unreachable', 'Nobody at the address', 'Customer refused delivery', 'Address could not be found', 'Customer had no cash for COD']
   };
 
-  return { PAL, ME, POLICY, FLOW, NEXT, CTA, ORDERS, HISTORY, WALLET, CHAT, NOTIFS, REASONS,
+  return { PAL, ME, POLICY, FLOW, NEXT, CTA, ORDERS, HISTORY, WALLET, CHAT, NOTIFS, REASONS, ISSUES,
            order: id => ORDERS.find(o => o.id === id) };
 })();

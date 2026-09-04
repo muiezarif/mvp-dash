@@ -200,17 +200,88 @@ window.SCREENS = window.SCREENS || {};
   SCREENS['reports'] = {
     title: 'Reports', epic: 'Epic 14',
     render() {
-      const d = D(), p = d.PLATFORM;
-      return U.page('Platform reports', 'Cross-product analytics and scheduled exports',
-        U.btn('Export CSV', { kind: 'primary', act: 'export', arg: 'platform-report' }) + U.btn('Export PDF', { act: 'export', arg: 'platform-pdf' }) +
-        U.btn('Schedule', { act: 'scheduleReport' })) + `
-        ${U.filters([
-          `<span class="f-l">Range</span>` + U.select(['Today', 'Last 7 days', 'Last 30 days', 'This month', 'This year'], 'Last 30 days', { act: 'stub' }),
-          `<span class="f-l">Product</span>` + U.select(['All products', 'Dash Merchant', 'Dash DMS', 'Dash 3PL'], 'All products', { act: 'stub' }),
-          `<span class="f-l">Source</span>` + U.select(['All sources', 'Direct', 'Marketplace', 'Dash Network'], 'All sources', { act: 'stub' }),
-          `<span class="f-l">Zone</span>` + U.select(['All zones', ...d.NETWORK.monitor.zones.map(z => z.z.split(' — ')[0])], 'All zones', { act: 'stub' }),
-          `<span class="f-sp"></span><span class="f-c">52,180 orders in range</span>`
-        ])}
+      const d = D(), p = d.PLATFORM, X = window.XDEEP;
+      STATE.rt = STATE.rt || 'Platform';
+      const tab = STATE.rt;
+
+      const slaRep = `
+        <div class="kpis k-4">
+          ${U.kpi('Promise met', '95.4%', '49,780 of 52,180 orders', '#1f8a4c')}
+          ${U.kpi('Breaches', '2,400', '4.6% — target under 5%', d.PAL.tang)}
+          ${U.kpi('Average breach', '15 min', 'Past the promised delivery time', d.PAL.peach)}
+          ${U.kpi('Credits issued', U.money(10560), 'Automatic on breach', d.PAL.lav)}
+        </div>
+        <div class="cols c-1-1">
+          ${U.panel('Breach rate by product', `<div class="blist">${[['Freelancer App', 7.2], ['Dash 3PL', 5.4], ['Dash Merchant', 4.1], ['Dash DMS', 3.2]]
+            .map(([k, v]) => '<div class="bl"><span>' + k + '</span>' + U.bar(v * 12, v > 5 ? d.PAL.tang : d.PAL.peach) + '<b>' + v + '%</b></div>').join('')}</div>
+            <div class="legend">The Freelancer App carries the widest promise and still breaches most — on-demand supply with no fleet behind it.</div>`, { pad: false })}
+          ${U.panel('Breach rate by supply node', U.table([{ t: 'Node' }, { t: 'Orders', num: true }, { t: 'On time', w: '140px' }, { t: 'Breaches', num: true }, { t: 'Penalties', num: true }],
+            d.NETWORK.supply.map(s => { const n = s.complete * 42, ot = s.complete;
+              return { cells: [U.esc(s.name), n, ot + '% ' + U.bar(ot, ot >= 93 ? d.PAL.lav : d.PAL.tang),
+                Math.round(n * (100 - ot) / 100), '<b style="color:#b0432a">−' + U.money(Math.round((100 - ot) * 4.4)) + '</b>'] }; })), { pad: false })}
+        </div>
+        ${U.panel('Breaches in the current window', U.table(
+          [{ t: 'Order' }, { t: 'Client' }, { t: 'Product' }, { t: 'Zone' }, { t: 'Promised' }, { t: 'Missed by' }, { t: 'Policy applied' }, { t: 'Intervention' }],
+          d.ORDERS.filter(o => X.sla(o).state === 'Late').map(o => { const s = X.sla(o);
+            return { act: 'xTrace', arg: o.id, cells: ['<b>' + o.id + '</b>', U.esc(o.merchant),
+              '<em class="sub">' + U.esc(o.product) + '</em>', o.zone, s.promisedDelivery,
+              '<b style="color:#b0432a">' + X.dur(Math.max(1, s.over)) + '</b>',
+              '<em class="sub">' + s.src + '</em>', U.scope(o.scope)] }; })), { pad: false,
+          right: '<span class="ph-note">Read against the platform policy and its four overrides</span>' })}`;
+
+      const rootRep = `
+        <div class="kpis k-4">
+          ${U.kpi('Cases raised', X.CASES().length, 'In the current window', d.PAL.lemon)}
+          ${U.kpi('Dash owns', X.CASES().filter(c => c.scope === 'dash').length, 'Network orders — Dash resolves these', d.PAL.vodka)}
+          ${U.kpi('Client owns', X.CASES().filter(c => c.scope !== 'dash').length, 'Dash can only escalate', d.PAL.lav)}
+          ${U.kpi('Median time to acknowledge', '4 min', 'From raised to claimed', d.PAL.peach)}
+        </div>
+        <div class="cols c-1-1">
+          ${U.panel('Root cause of failures', `<div class="blist">${[['No supply in the zone', 28], ['Customer unavailable', 24],
+            ['Client integration failing', 17], ['Wrong or changed address', 14], ['Merchant not ready', 11], ['Vehicle problem', 6]]
+            .map(([k, v]) => '<div class="bl"><span>' + k + '</span>' + U.bar(v * 3, d.PAL.vodka) + '<b>' + v + '%</b></div>').join('')}</div>
+            <div class="legend">A sixth of platform failures are integrations, not deliveries — they are the cheapest to fix and nobody owns them yet.</div>`, { pad: false })}
+          ${U.panel('Where cases come from', U.table([{ t: 'Source' }, { t: 'Cases', num: true }, { t: 'Share', w: '140px' }],
+            [['SLA breach, automatic', 4, 31], ['Routing failure, automatic', 3, 23], ['Freelancer app report', 2, 15],
+             ['Driver or provider offline', 2, 15], ['Dash raised manually', 2, 16]]
+              .map(([s, n, pc]) => ({ cells: [s, n, pc + '% ' + U.bar(pc, d.PAL.lav)] }))), { pad: false })}
+        </div>
+        ${U.panel('Case log', U.table(
+          [{ t: 'Case' }, { t: 'Type' }, { t: 'Order' }, { t: 'Client' }, { t: 'Severity' }, { t: 'State' }, { t: 'Owner' }, { t: 'Intervention' }, { t: 'Resolution' }],
+          X.CASES().map(c => ({ act: 'xCase', arg: c.id, cells: ['<b>' + c.id + '</b>', U.esc(c.type), c.order, U.esc(c.client),
+            U.tag(c.sev, X.CASE_SEV[c.sev], { solid: true }),
+            U.tag(c.state, c.state === 'Resolved' ? '#1f8a4c' : c.state === 'Acknowledged' ? d.PAL.lav : d.PAL.lemon, { solid: c.state !== 'Resolved' }),
+            c.owner ? U.esc(c.owner) : '<em class="warn">Unclaimed</em>', U.scope(c.scope),
+            c.resolution ? U.esc(c.resolution) : '<em class="sub">—</em>'] }))), { pad: false })}`;
+
+      const settleRep = `
+        <div class="kpis k-4">
+          ${U.kpi('Gross GMV in range', U.money(253600), '12,680 delivered orders', d.PAL.peach)}
+          ${U.kpi('Dash revenue', U.money(54980), 'Commission plus subscriptions', '#1f8a4c')}
+          ${U.kpi('Payouts owed', U.money(178400), 'To 34 supply nodes', d.PAL.lav)}
+          ${U.kpi('Held in dispute', U.money(32), 'Two open disputes', d.PAL.tang)}
+        </div>
+        ${U.panel('Reconciliation by settlement period', U.table(
+          [{ t: 'Cycle' }, { t: 'Range' }, { t: 'Orders', num: true }, { t: 'Gross GMV', num: true }, { t: 'Commission', num: true },
+           { t: 'Subscriptions', num: true }, { t: 'Dash revenue', num: true }, { t: 'Payouts', num: true }, { t: 'COD', num: true }, { t: 'State' }],
+          X.PERIODS.map(pd => ({ act: 'xStatement', arg: pd.id, cells: ['<b>' + pd.id + '</b>', pd.label, pd.orders.toLocaleString(),
+            U.money(pd.gross), U.money(pd.commission), U.money(pd.fees),
+            '<b>' + U.money(pd.commission + pd.fees) + '</b>', U.money(pd.payouts), U.money(pd.cod),
+            U.tag(pd.state, X.SETTLE_STATE[pd.state], { solid: pd.state !== 'Settled' })] }))), { pad: false })}
+        <div class="cols c-1-1">
+          ${U.panel('Where Dash earns', U.table([{ t: 'Source' }, { t: 'Orders', num: true }, { t: 'GMV', num: true }, { t: 'Dash take', num: true }, { t: 'Rate' }],
+            [['Dash Network', 4120, 82400, 6592, '8% commission'],
+             ['Marketplace', 5240, 104800, 2096, '2% platform fee'],
+             ['Direct', 3320, 66400, 1328, '2% platform fee'],
+             ['Subscriptions', 195, 0, 42600, 'Monthly, by plan']]
+              .map(([s, n, g, t, r]) => ({ cells: [U.esc(s), n.toLocaleString(), g ? U.money(g) : '—',
+                '<b>' + U.money(t) + '</b>', '<em class="sub">' + U.esc(r) + '</em>'] }))), { pad: false,
+            right: '<span class="ph-note">Subscriptions still out-earn every commission line</span>' })}
+          ${U.panel('Audit trail', `<div class="log">${X.FINAUDIT.map(a =>
+            '<div class="lg"><span class="lg-t">' + a.t + '</span><span class="lg-e"><b>' + U.esc(a.a) + '</b><em>' + U.esc(a.o) + ' · ' + U.esc(a.u) + '</em></span></div>').join('')}</div>`, { pad: false })}
+        </div>`;
+
+      const platform = `
         <div class="kpis k-4">
           ${U.kpi('Orders', p.orders.month.toLocaleString(), '+6.7% on July', d.PAL.peach)}
           ${U.kpi('Clients', 195, '+17 this month', d.PAL.lav)}
@@ -237,13 +308,29 @@ window.SCREENS = window.SCREENS || {};
             [{ t: 'Zone' }, { t: 'Demand', num: true }, { t: 'Supply', num: true }, { t: 'Balance' }],
             d.NETWORK.monitor.zones.map(z => ({ cells: [U.esc(z.z), z.demand, z.supply,
               U.tag(z.state, z.state === 'Healthy' ? '#1f8a4c' : z.state === 'Critical' ? d.PAL.tang : d.PAL.peach, { solid: z.state !== 'Healthy' })] }))), { pad: false })}
-        </div>
+        </div>`;
+
+      return U.page('Platform reports', 'Cross-product analytics and scheduled exports',
+        U.btn('Export CSV', { kind: 'primary', act: 'export', arg: 'platform-report' }) + U.btn('Export PDF', { act: 'export', arg: 'platform-pdf' }) +
+        U.btn('Schedule', { act: 'scheduleReport' })) + `
+        ${U.filters([
+          `<span class="f-l">Range</span>` + U.select(['Today', 'Last 7 days', 'Last 30 days', 'This month', 'This year'], 'Last 30 days', { act: 'stub' }),
+          `<span class="f-l">Product</span>` + U.select(['All products', 'Dash Merchant', 'Dash DMS', 'Dash 3PL', 'Freelancer App'], 'All products', { act: 'stub' }),
+          `<span class="f-l">Source</span>` + U.select(['All sources', 'Direct', 'Marketplace', 'Dash Network'], 'All sources', { act: 'stub' }),
+          `<span class="f-l">Zone</span>` + U.select(['All zones', ...d.NETWORK.monitor.zones.map(z => z.z.split(' — ')[0])], 'All zones', { act: 'stub' }),
+          `<span class="f-sp"></span><span class="f-c">52,180 orders in range</span>`
+        ])}
+        ${U.tabs(['Platform', 'SLA performance', 'Interventions', 'Settlement'], tab, 'reportTab')}
+        ${tab === 'SLA performance' ? slaRep : tab === 'Interventions' ? rootRep : tab === 'Settlement' ? settleRep : platform}
         ${U.panel('Scheduled reports', U.table(
           [{ t: 'Report' }, { t: 'Recipients' }, { t: 'Schedule' }, { t: 'Format' }, { t: '', w: '150px' }],
           [['Daily platform summary', 'ops@dash.sa', 'Every day 23:45', 'PDF'],
            ['Weekly network health', 'dana@dash.sa, khalid@dash.sa', 'Sunday 08:00', 'PDF'],
            ['Monthly revenue and settlement', 'finance@dash.sa', '1st of the month', 'CSV'],
-           ['Client growth', 'board@dash.sa', '1st of the month', 'PDF']]
+           ['Client growth', 'board@dash.sa', '1st of the month', 'PDF'],
+           ['SLA performance and breaches', 'ops@dash.sa', 'Sunday 08:00', 'Excel'],
+           ['Intervention and root cause', 'dana@dash.sa', 'Sunday 08:00', 'PDF'],
+           ['Settlement and reconciliation', 'finance@dash.sa', 'Monday 07:00', 'Excel']]
             .map(([n, to, when, fmt]) => ({ cells: [U.esc(n), U.esc(to), U.esc(when), fmt,
               `<div class="rowact">${U.btn('Edit', { act: 'stub', arg: 'Edit schedule' })}${U.btn('Pause', { act: 'stub', arg: 'Schedule paused' })}</div>`] }))), { pad: false })}`;
     }

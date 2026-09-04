@@ -66,7 +66,7 @@ window.SCREENS = window.SCREENS || {};
      row and on the map pin, never discovered by clicking a dead button. */
   const CT_DEF = { view:'List', client:'All clients', ctype:'All client types',
     city:'Riyadh', district:'All districts', zone:'All zones', status:'All statuses',
-    source:'All sources', type:'All types', by:'All providers', q:'' };
+    source:'All sources', type:'All types', by:'All providers', sla:'All SLA states', q:'' };
   STATE.ct = STATE.ct || Object.assign({}, CT_DEF);
 
   const fg = (label, control) =>
@@ -90,29 +90,58 @@ window.SCREENS = window.SCREENS || {};
       if (f.source !== 'All sources' && (f.source === 'Dash Network' ? o.source !== 'Network' : o.source !== f.source)) return false;
       if (f.type !== 'All types' && o.type !== f.type) return false;
       if (f.by !== 'All providers' && o.provider !== f.by) return false;
-      if (f.q && !(o.id + ' ' + o.merchant + ' ' + o.customer).toLowerCase().includes(f.q.toLowerCase())) return false;
+      if (f.sla !== 'All SLA states' && XDEEP.sla(o).state !== f.sla) return false;
+      if (f.q && !(o.id + ' ' + o.merchant + ' ' + o.customer + ' ' + o.product).toLowerCase().includes(f.q.toLowerCase())) return false;
       return true;
     });
   }
 
-  /* Two tiers, and the design must not blur them. The first is Dash's queue.
-     The second is Dash knowing what is happening to its clients. */
-  function ctAlerts() {
-    const d = D(), act = [], obs = [];
-    ctFilter(d.ORDERS).forEach(o => {
-      const dash = o.scope === 'dash';
-      const bucket = dash ? act : obs;
-      const push = (p, k, t) => bucket.push({ p, k, t, o: o.id, dash });
-      if (o.offline) push(0, 'Went offline', o.id + ' — ' + o.offline + ' has sent no location for 11 min');
-      if (o.noResponse) push(0, 'Not accepted', o.id + ' — offered to ' + o.provider + ', response window closed');
-      if (!dash && o.stuck) push(1, 'Stuck', o.id + ' — ' + o.stuck + ' min without movement at ' + o.provider);
-      if (dash && o.stuck) push(1, 'Stuck', o.id + ' — ' + o.stuck + ' min without movement · ' + (o.provider === '—' ? 'no provider took it' : o.provider));
-      if (o.failed) push(1, 'Failed delivery', o.id + ' failed at the door — awaiting a decision');
-      if (o.late) push(2, 'Late', o.id + ' passed its ' + o.eta + ' delivery time · ' + o.merchant);
-      if (dash && o.provider === '—' && !o.stuck) push(2, 'Unassigned', o.id + ' has no provider and is past its window');
-    });
-    const by = (x, y) => x.p - y.p;
-    return { act: act.sort(by), obs: obs.sort(by) };
+  /* Cases, not alerts. Two tiers, and the design must not blur them: what Dash owns,
+     and what Dash can only watch and escalate. */
+  const SEVP = { High:0, Medium:1, Low:2 };
+  function ctCases() {
+    const tab = STATE.caseFilter, ids = ctFilter(D().ORDERS).map(o => o.id);
+    return XDEEP.CASES()
+      .filter(c => ids.indexOf(c.order) >= 0)
+      .filter(c => tab === 'All' ? true : tab === 'Mine' ? c.owner === XDEEP.OPERATOR && c.state !== 'Resolved'
+        : tab === 'Resolved' ? c.state === 'Resolved' : c.state !== 'Resolved')
+      .sort((a, b) => (a.state === 'Resolved') - (b.state === 'Resolved') || SEVP[a.sev] - SEVP[b.sev] || XDEEP.mn(a.created) - XDEEP.mn(b.created));
+  }
+  function caseCard(c) {
+    const d = D(), o = d.order(c.order), dash = c.scope === 'dash';
+    return '<div class="case st-' + c.state.toLowerCase() + '" style="--cs:' + XDEEP.CASE_SEV[c.sev] + '">' +
+      '<div class="case-h"><span class="case-id">' + c.id + '</span><span class="case-k">' + U.esc(c.type) + '</span>' +
+        U.tag(c.state, c.state === 'Resolved' ? '#1f8a4c' : c.state === 'Acknowledged' ? d.PAL.lav : d.PAL.lemon, { solid: c.state !== 'Resolved' }) +
+        '<span class="case-o">' + (c.owner ? U.esc(c.owner) : 'Unclaimed') + '</span></div>' +
+      '<div class="case-t">' + U.esc(c.reason) + '</div>' +
+      '<div class="case-m">' + c.order + ' · ' + U.esc(c.client) + (o ? ' · ' + o.status : '') + ' · raised ' + c.created + ' · ' + U.esc(c.via) +
+        (c.resolution ? ' · resolved ' + c.resolvedAt + ' — ' + U.esc(c.resolution) : '') + '</div>' +
+      '<div class="case-a">' +
+        (c.state === 'Open' ? U.btn('Acknowledge', { kind:'primary', act:'xCaseAck', arg:c.id }) : '') +
+        (c.state === 'Acknowledged' && dash ? U.btn('Resolve', { kind:'primary', act:'xCaseResolve', arg:c.id }) : '') +
+        (c.state !== 'Resolved' && !dash ? U.btn('Escalate to the owner', { act:'escalateOwner', arg:c.order }) : '') +
+        U.btn('Case', { act:'xCase', arg:c.id }) +
+        U.btn('Trace', { act:'xTrace', arg:c.order }) +
+      '</div></div>';
+  }
+  function caseStrips() {
+    const cases = ctCases(), all = XDEEP.CASES();
+    const mine = cases.filter(c => c.scope === 'dash'), theirs = cases.filter(c => c.scope !== 'dash');
+    const tabs = '<span class="casetabs">' + ['Open', 'Mine', 'Resolved', 'All'].map(t =>
+      '<button type="button" class="ctab ' + (STATE.caseFilter === t ? 'on' : '') + '" data-act="caseTab" data-arg="' + t + '">' + t + '</button>').join('') + '</span>';
+    const body = list => list.length ? '<div class="astrip-b">' + list.map(caseCard).join('') + '</div>'
+      : '<div class="astrip-none">Nothing in this view.</div>';
+    return '<div class="cols c-1-1 astrips">' +
+      '<section class="astrip"><div class="astrip-h"><b>Dash must act</b>' +
+        '<em>' + mine.filter(c => c.state === 'Open').length + ' open</em>' +
+        '<em class="ack">' + mine.filter(c => c.state === 'Acknowledged').length + ' acknowledged</em>' +
+        '<span class="astrip-ro">Dash Network orders — nobody else will fix these</span>' + tabs + '</div>' +
+        body(mine) + '</section>' +
+      '<section class="astrip obs"><div class="astrip-h"><b>Happening to clients</b>' +
+        '<em>' + theirs.filter(c => c.state !== 'Resolved').length + ' open</em>' +
+        '<span class="astrip-ro">Direct and Marketplace — acknowledge and escalate, never reach in</span></div>' +
+        body(theirs) + '</section>' +
+    '</div>';
   }
 
   SCREENS['control-tower'] = {
@@ -120,7 +149,6 @@ window.SCREENS = window.SCREENS || {};
     render() {
       const d = D(), f = STATE.ct;
       const all = ctFilter(live());
-      const alerts = ctAlerts();
       const dashQueue = all.filter(o => o.scope === 'dash' &&
         (o.stuck || o.provider === '—' || o.noResponse || o.failed || o.offline || o.status === 'Routing'));
       const flight = all.filter(o => dashQueue.indexOf(o) < 0);
@@ -150,8 +178,8 @@ window.SCREENS = window.SCREENS || {};
           '<div class="bcol-b">' + (items.map(o => {
             const dash = o.scope === 'dash';
             return '<button type="button" class="bcard ' + (dash ? 'sc-dash' : 'sc-owner') + (o.stuck || o.late || o.failed ? ' warn' : '') + '" data-act="ctPick" data-arg="' + o.id + '">' +
-              '<span class="bc-h"><b>' + o.id + '</b>' + srcTag(o.source) + '</span>' +
-              '<span class="bc-m">' + U.esc(o.merchant) + ' · ' + o.zone + '</span>' +
+              '<span class="bc-h"><b>' + o.id + '</b>' + XDEEP.slaTag(XDEEP.sla(o).state) + '</span>' +
+              '<span class="bc-m">' + U.esc(o.merchant) + ' · ' + o.zone + ' · ' + srcTag(o.source) + '</span>' +
               '<span class="bc-m">' + (o.provider === '—' ? '<em class="warn">No provider</em>' : U.esc(o.provider)) + '</span>' +
               '<span class="bc-f"><em class="' + (dash ? 'sc-y' : 'sc-n') + '">' + (dash ? 'Dash can act' : 'Owner only') + '</em>' +
                 '<em>' + (o.stuck ? o.stuck + 'm stuck' : 'ETA ' + o.eta) + '</em></span>' +
@@ -159,26 +187,7 @@ window.SCREENS = window.SCREENS || {};
           }).join('') || '<div class="bcol-e">—</div>') + '</div></div>';
       }).join('') + '</div>';
 
-      const stripFor = (list, kind) => list.length
-        ? '<div class="astrip-b">' + list.map(x =>
-            '<div class="astrip-i p' + x.p + (kind === 'obs' ? ' ro' : '') + '"><span class="astrip-k">' + x.k + '</span>' +
-            '<span class="astrip-t">' + U.esc(x.t) + '</span>' +
-            (kind === 'act'
-              ? '<span class="astrip-a">' + U.btn('Open', { kind: 'primary', act: 'ctPick', arg: x.o }) +
-                U.btn('Reassign', { act: 'reassign', arg: x.o }) + '</span>'
-              : '<span class="astrip-a">' + U.btn('Ticket', { act: 'ticketFor', arg: x.o }) + '</span>') +
-            '</div>').join('') + '</div>'
-        : '<div class="astrip-none">Nothing here.</div>';
-
-      const strip =
-        '<div class="cols c-1-1 astrips">' +
-          '<section class="astrip"><div class="astrip-h"><b>Dash must act</b><em>' + alerts.act.length + '</em>' +
-            '<span class="astrip-ro">Dash Network orders — nobody else will fix these</span></div>' +
-            stripFor(alerts.act, 'act') + '</section>' +
-          '<section class="astrip obs"><div class="astrip-h"><b>Happening to clients</b><em>' + alerts.obs.length + '</em>' +
-            '<span class="astrip-ro">Direct and Marketplace — reach out, do not reach in</span></div>' +
-            stripFor(alerts.obs, 'obs') + '</section>' +
-        '</div>';
+      const strip = caseStrips();
 
       const vtog = '<div class="vtog">' +
         '<button type="button" class="vt ' + (f.view === 'Map' ? 'on' : '') + '" data-act="ctView" data-arg="Map">Map</button>' +
@@ -193,7 +202,7 @@ window.SCREENS = window.SCREENS || {};
       const queuePanel = U.panel('Network orders needing attention',
         '<div class="mlist">' + (dashQueue.map(o =>
           '<button type="button" class="ml sc-dash ' + (o.stuck || o.failed || o.offline ? 'warn' : '') + '" data-act="ctPick" data-arg="' + o.id + '">' +
-            '<span class="ml-h"><b>' + o.id + '</b><em class="el">' + (o.stuck ? o.stuck + 'm stuck' : (o.elapsed || '0m')) + '</em></span>' +
+            '<span class="ml-h"><b>' + o.id + '</b>' + XDEEP.slaTag(XDEEP.sla(o).state) + '<em class="el">' + (o.stuck ? o.stuck + 'm stuck' : (o.elapsed || '0m')) + '</em></span>' +
             '<span class="ml-s">' + U.esc(o.merchant) + ' · ' + o.zone + ' · ' + (o.provider === '—' ? '<em class="warn">no provider</em>' : U.esc(o.provider)) + '</span>' +
             '<span class="ml-s">' + (o.offline ? '<em class="warn">' + U.esc(o.offline) + ' offline</em>'
               : o.failed ? '<em class="warn">Failed — awaiting a decision</em>'
@@ -210,7 +219,7 @@ window.SCREENS = window.SCREENS || {};
           '<div class="dgrp">' + st + '<em>' + flight.filter(o => o.status === st).length + '</em></div>' +
           flight.filter(o => o.status === st).map(o =>
             '<button type="button" class="ml ' + (o.scope === 'dash' ? 'sc-dash' : 'sc-owner') + (o.late ? ' warn' : '') + '" data-act="ctPick" data-arg="' + o.id + '">' +
-              '<span class="ml-h"><b>' + o.id + '</b><em class="el">' + (o.elapsed || '0m') + '</em></span>' +
+              '<span class="ml-h"><b>' + o.id + '</b>' + XDEEP.slaTag(XDEEP.sla(o).state) + '<em class="el">' + (o.elapsed || '0m') + '</em></span>' +
               '<span class="ml-s">' + U.esc(o.merchant) + ' · ' + U.esc(o.provider) + '</span>' +
               '<span class="ml-s">' + srcTag(o.source) + ' ' + o.zone + ' · ETA ' + o.eta + '</span>' +
             '</button>').join('')).join('') || '<div class="empty">Nothing else in flight.</div>') + '</div>',
@@ -255,6 +264,7 @@ window.SCREENS = window.SCREENS || {};
           fg('Source', U.select(['All sources', 'Direct', 'Marketplace', 'Dash Network'], f.source, { act: 'ctF', arg: 'source' })),
           fg('Type', U.select(['All types', 'On demand', 'Scheduled'], f.type, { act: 'ctF', arg: 'type' })),
           fg('Fulfilled by', U.select(['All providers'].concat([...new Set(d.ORDERS.map(o => o.provider))].filter(p => p !== '—')), f.by, { act: 'ctF', arg: 'by' })),
+          fg('SLA state', U.select(['All SLA states', 'On time', 'At risk', 'Late'], f.sla, { act: 'ctF', arg: 'sla' })),
           '<span class="f-sp"></span><span class="f-c">' + all.length + ' of ' + live().length + ' active</span>',
           ctDirty() ? U.btn('Clear filters', { act: 'ctReset' })
             : '<span class="f-c dim">Scoped to Riyadh — the platform default</span>'
@@ -294,6 +304,10 @@ window.SCREENS = window.SCREENS || {};
           <div class="stack">
             ${U.panel('Order', U.defs([
               ['Status', U.statusTag(o.status)],
+              ['SLA state', XDEEP.slaTag(XDEEP.sla(o).state) + ' <em class="sub">pickup by ' + XDEEP.sla(o).promisedPickup +
+                ' · delivery by ' + XDEEP.sla(o).promisedDelivery + ' · ' + XDEEP.sla(o).src + '</em>'],
+              ['Ageing', XDEEP.dur(XDEEP.sla(o).age) + (XDEEP.sla(o).state === 'Late'
+                ? ' <em class="warn">· ' + XDEEP.dur(Math.max(1, XDEEP.sla(o).over)) + ' past the promise</em>' : '')],
               ['Intervention scope', U.scope(o.scope) + ' <em class="sub">' + (dash ? 'Reassign, cancel and escalate are all available' : 'Read only — escalate to the owner instead') + '</em>'],
               ['Source', srcTag(o.source) + ' <em class="sub">' + (o.source === 'Network' ? 'Routed by the engine — Dash chose the provider' : o.source === 'Marketplace' ? 'Merchant connected to this provider through a listing' : 'Merchant sent it straight to their own provider') + '</em>'],
               ['Client', `<a href="#/clients/${(d.CLIENTS.find(c => c.name === o.merchant) || {}).id || ''}">${U.esc(o.merchant)}</a>`],
@@ -304,8 +318,24 @@ window.SCREENS = window.SCREENS || {};
               ['Cash on delivery', o.cod ? U.money(o.cod) : 'Cash free'],
               ['Created', o.created], ['ETA', o.eta]
             ]))}
-            ${U.panel('Full history', `<div class="log">${o.log.map(l =>
-              `<div class="lg"><span class="lg-t">${l.t}</span><span class="lg-e"><b>${U.esc(l.e)}</b>${l.s ? `<em>${U.esc(l.s)}</em>` : ''}</span></div>`).join('')}</div>`, { pad: false })}
+            ${U.panel('Order trace', XDEEP.traceHTML(o), { pad: false,
+              right: U.btn('Open the trace drawer', { act: 'xTrace', arg: o.id }) })}
+            ${U.panel('Offer attempts', XDEEP.offersFor(o.id).length ? `<div class="offers">${XDEEP.offersFor(o.id).map((f, i) => `
+              <div class="of o-${f.out.toLowerCase().replace(/\s/g, '')}"><span class="of-n">${i + 1}</span>
+                <div><b>${U.esc(f.who)}</b><em>${U.esc(f.sub)}</em></div>
+                <span class="of-o">${f.out}</span><span class="of-t">${f.t}</span></div>`).join('')}</div>`
+              : U.note(dash ? 'No offer has gone out.' : 'Dash did not route this order.',
+                dash ? 'The routing engine found no eligible supply.' : U.esc(o.merchant) + ' chose their own provider.',
+                dash ? d.PAL.peach : d.PAL.lav), { pad: false })}
+            ${U.panel('Dispatch diagnostics', XDEEP.diagHTML(o), { right: U.btn('Routing engine', { act: 'go', arg: '/routing' }) })}
+            ${U.panel('Settlement', U.defs([
+              ['State', U.tag(XDEEP.settle(o).state, XDEEP.SETTLE_STATE[XDEEP.settle(o).state], { solid: XDEEP.settle(o).state !== 'Settled' })],
+              ['Priced by', U.esc(XDEEP.settle(o).priced)],
+              ['Gross', U.money(XDEEP.settle(o).gross)],
+              ['Dash take', XDEEP.settle(o).commission ? U.money(XDEEP.settle(o).commission) + ' <em class="sub">8% commission</em>' : U.money(XDEEP.settle(o).platformFee) + ' <em class="sub">platform fee</em>'],
+              ['Merchant receivable', '<b>' + U.money(XDEEP.settle(o).receivable) + '</b>'],
+              ['Period', XDEEP.settle(o).period]]) +
+              '<div class="btnrow">' + U.btn('Open the settlement record', { act: 'xSettle', arg: o.id }) + '</div>')}
           </div>
           <div class="stack">
             ${U.panel('Who can do what', `<div class="states">

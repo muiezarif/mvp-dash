@@ -231,19 +231,41 @@ window.SCREENS = window.SCREENS || {};
               ['Wallet balance', c.wallet < 0 ? `<b class="warn">${U.money(c.wallet)}</b>` : U.money(c.wallet)],
               [c.type === 'Merchant' ? 'Branches' : 'Fleet or zones', c.branches || '—']
             ]), { right: U.btn('Change plan', { act: 'stub', arg: 'Plan change — takes effect next invoice' }) })}
+            ${c.type === 'Merchant' ? U.panel('Branches · ' + (c.branches || 0), (c.branchList || []).length ? U.table(
+              [{ t: 'Code' }, { t: 'Branch' }, { t: 'District' }, { t: 'Zone' }, { t: 'Hours' }, { t: 'Manager' },
+               { t: 'Orders/day', num: true }, { t: 'On time', num: true }, { t: 'State' }],
+              c.branchList.map(b => ({ cells: [
+                `<code>${b.code}</code>`, `<b>${U.esc(b.name)}</b>`, U.esc(b.district), b.zone, b.hours, U.esc(b.mgr),
+                b.orders, b.onTime + '%',
+                U.tag(b.status, b.status === 'Open' ? '#1f8a4c' : d.PAL.peach, { solid: b.status !== 'Open' })] })))
+              : '<div class="empty">No branches on file — they ship from one address.</div>',
+              { pad: false, right: '<span class="ph-note">Their sites, read only. Dispatch rules and SLA overrides can be set per branch inside their own product</span>' }) : ''}
             ${U.panel('Integration and connection health', `
               ${U.defs([
                 ['Method', U.esc(c.integration)],
                 ['Connected', c.integrations.length ? c.integrations.map(i => U.tag(i, d.PAL.lav)).join(' ') : '<em class="sub">Nothing connected</em>'],
                 ['Health', c.health === '—' ? '<em class="sub">No integration yet</em>' : U.tag(c.health, c.health === 'Healthy' ? '#1f8a4c' : d.PAL.tang, { solid: c.health !== 'Healthy' })]
               ])}
-              ${c.health !== 'Healthy' && c.health !== '—' ? U.note('This is how clients quietly lose orders.', U.esc(c.note) + ' They may not have noticed yet — a failing webhook looks like a quiet day.', d.PAL.tang) : ''}`)}
+              ${c.health !== 'Healthy' && c.health !== '—' ? U.note('This is how clients quietly lose orders.', U.esc(c.note) + ' They may not have noticed yet — a failing webhook looks like a quiet day.', d.PAL.tang) : ''}
+              ${XDEEP.CONNS.filter(x => x.c === c.name).length ? U.table(
+                [{ t: 'Connection' }, { t: 'Kind' }, { t: 'State' }, { t: 'Last success' }, { t: 'Failed', num: true }, { t: 'What went wrong' }, { t: 'Delivery' }, { t: '', w: '150px' }],
+                XDEEP.CONNS.filter(x => x.c === c.name).map(x => ({ cells: [
+                  '<b>' + U.esc(x.n) + '</b>', '<em class="sub">' + U.esc(x.k) + '</em>',
+                  U.tag(x.s, x.s === 'Connected' ? '#1f8a4c' : x.s === 'Error' ? d.PAL.tang : '#c9c9c9', { solid: x.s === 'Error' }),
+                  x.last, x.fails || '—',
+                  x.err ? '<em class="warn">' + U.esc(x.err) + '</em>' : '<em class="sub">Nothing</em>',
+                  U.esc(x.hook),
+                  '<div class="rowact">' + (x.s === 'Error'
+                    ? U.btn('Reprocess ' + x.fails, { kind: 'primary', act: 'stub', arg: x.fails + ' held calls queued for replay once the key matches' })
+                    : U.btn('Test', { act: 'stub', arg: 'Test call to ' + x.n + ' — 200 OK' })) + '</div>'] }))) : ''}
+              ${XDEEP.CONNS.filter(x => x.c === c.name && x.s === 'Error').length
+                ? '<div class="fld-h">Dash can see this before the client does. Tell them — do not wait for a ticket.</div>' : ''}`)}
             ${orders.length ? U.panel('Recent orders', U.table(
-              [{ t: 'Order' }, { t: 'Role' }, { t: 'Source' }, { t: 'Status' }, { t: 'Zone' }, { t: 'Scope' }],
-              orders.map(o => ({ act: 'go', arg: '/control-tower/' + o.id, cells: [
+              [{ t: 'Order' }, { t: 'Role' }, { t: 'Source' }, { t: 'Status' }, { t: 'SLA' }, { t: 'Zone' }, { t: 'Scope' }],
+              orders.map(o => ({ act: 'xTrace', arg: o.id, cells: [
                 `<b>${o.id}</b>`, o.merchant === c.name ? 'Sender' : 'Provider',
                 U.tag(o.source === 'Network' ? 'Dash Network' : o.source, o.source === 'Network' ? d.PAL.vodka : d.PAL.lav),
-                U.statusTag(o.status), o.zone, U.scope(o.scope)] }))), { pad: false }) : ''}
+                U.statusTag(o.status), XDEEP.slaTag(XDEEP.sla(o).state), o.zone, U.scope(o.scope)] }))), { pad: false }) : ''}
           </div>
           <div class="stack">
             ${U.panel('Network participation', `${U.defs([

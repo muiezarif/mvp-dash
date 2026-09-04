@@ -77,7 +77,8 @@ window.STATE = window.STATE || {};
   /* ---------------- 16 · 17 Control Tower — one live operations screen ---------------- */
   const CT_DEF = { view:'Map', city:'All cities', district:'All districts', zone:'All zones',
     status:'All statuses', driver:'All drivers', merchant:'All merchants',
-    source:'All sources', type:'All types', vehicle:'All vehicles' };
+    source:'All sources', type:'All types', vehicle:'All vehicles',
+    sla:'All SLA states', branch:'All branches', q:'' };
   STATE.ct = STATE.ct || Object.assign({}, CT_DEF);
 
   /* one filter predicate, both views */
@@ -100,6 +101,14 @@ window.STATE = window.STATE || {};
       if (f.source !== 'All sources' && o.source !== f.source) return false;
       if (f.type !== 'All types' && o.type !== f.type) return false;
       if (f.vehicle !== 'All vehicles' && (!dr || d.vehicle(dr.vehicle).type !== f.vehicle)) return false;
+      if (f.branch !== 'All branches' && o.branch !== f.branch) return false;
+      if (f.sla !== 'All SLA states' && DEEP.sla(o).state !== f.sla) return false;
+      if (f.q) {
+        const q = f.q.toLowerCase();
+        const hay = [o.id, o.branch, d.merchant(o.merchant).name, d.customer(o.customer).name,
+          d.customer(o.customer).phone, 'ext-' + o.id.slice(3)].join(' ').toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
       return true;
     });
   }
@@ -132,32 +141,42 @@ window.STATE = window.STATE || {};
 
   const ctDirty = () => Object.keys(CT_DEF).some(k => k !== 'view' && STATE.ct[k] !== CT_DEF[k]);
 
-  /* alert strip — ordered by urgency, actionable in place */
-  function ctAlerts() {
-    const d = D(), a = [];
-    d.ORDERS.forEach(o => {
-      if (['Delivered','Cancelled','Returned'].includes(o.status)) return;
-      const dr = o.driver ? d.driver(o.driver) : null;
-      if (dr && !dr.online)
-        a.push({ p:0, k:'Driver offline', t:dr.name + ' went offline mid-order on ' + o.id,
-          act:U.btn('Reassign', { kind:'primary', act:'assign', arg:o.id }) + U.btn('Chat', { act:'chat', arg:dr.id }) });
-      if (o.offered)
-        a.push({ p:0, k:'No response', t:o.id + ' offered to ' + d.driver(o.offered).name + ' — response window closed',
-          act:U.btn('Reassign', { kind:'primary', act:'assign', arg:o.id }) + U.btn('Open', { act:'go', arg:'/orders/' + o.id }) });
-      if (o.late)
-        a.push({ p:1, k:'Running late', t:o.id + ' ETA ' + o.eta + ' — past its expected delivery time' + (o.cod ? ' · COD ' + U.money(o.cod) : ''),
-          act:U.btn('Escalate', { kind:'primary', act:'escalate', arg:o.id }) + U.btn('Chat', { act:'chat', arg:o.driver || '' }) });
-      if (o.stuck)
-        a.push({ p:1, k:'Stuck', t:o.id + ' — no status update for ' + o.stuck + ' min',
-          act:U.btn('Chat driver', { kind:'primary', act:'chat', arg:o.driver || '' }) + U.btn('Reassign', { act:'assign', arg:o.id }) });
-      if (o.failed)
-        a.push({ p:2, k:'Failed delivery', t:o.id + ' failed — awaiting your decision on reattempt or return',
-          act:U.btn('Decide', { kind:'primary', act:'failedDecision', arg:o.id }) });
-      if (o.type === 'Scheduled' && !o.driver)
-        a.push({ p:3, k:'Scheduled', t:o.id + ' assigns at ' + (o.assignAt || o.eta) + ' with no driver yet' + (d.zone(o.zone).status === 'Paused' ? ' · ' + d.zone(o.zone).code + ' is paused' : ''),
-          act:U.btn('Assign now', { kind:'primary', act:'assign', arg:o.id }) });
-    });
-    return a.sort((x, y) => x.p - y.p);
+  /* Needs intervention — cases with a lifecycle, owned and resolved in place */
+  const SEVP = { High:0, Medium:1, Low:2 };
+  function ctCases() {
+    const tab = STATE.caseFilter;
+    return DEEP.CASES()
+      .filter(c => tab === 'All' ? true : tab === 'Mine' ? c.owner === DEEP.OPERATOR && c.state !== 'Resolved'
+        : tab === 'Resolved' ? c.state === 'Resolved' : c.state !== 'Resolved')
+      .sort((a, b) => (a.state === 'Resolved') - (b.state === 'Resolved') || SEVP[a.sev] - SEVP[b.sev] || DEEP.mn(a.created) - DEEP.mn(b.created));
+  }
+  function caseStrip() {
+    const d = D(), cases = ctCases(), all = DEEP.CASES();
+    const open = all.filter(c => c.state === 'Open').length;
+    const ack = all.filter(c => c.state === 'Acknowledged').length;
+    const head = '<div class="astrip-h"><b>Needs intervention</b>' +
+      '<em>' + open + ' open</em><em class="ack">' + ack + ' acknowledged</em>' +
+      '<span class="casetabs">' + ['Open', 'Mine', 'Resolved', 'All'].map(t =>
+        '<button type="button" class="ctab ' + (STATE.caseFilter === t ? 'on' : '') + '" data-act="caseTab" data-arg="' + t + '">' + t + '</button>').join('') + '</span></div>';
+    if (!cases.length)
+      return '<section class="astrip">' + head + '<div class="astrip-b"><div class="empty">Nothing in this view.</div></div></section>';
+    return '<section class="astrip">' + head + '<div class="astrip-b">' + cases.map(c => {
+      const o = d.order(c.order);
+      return '<div class="case st-' + c.state.toLowerCase() + '" style="--cs:' + DEEP.CASE_SEV[c.sev] + '">' +
+        '<div class="case-h"><span class="case-id">' + c.id + '</span><span class="case-k">' + U.esc(c.type) + '</span>' +
+          U.tag(c.state, c.state === 'Resolved' ? '#1f8a4c' : c.state === 'Acknowledged' ? d.PAL.lav : d.PAL.lemon, { solid: c.state !== 'Resolved' }) +
+          '<span class="case-o">' + (c.owner ? U.esc(c.owner) : 'Unclaimed') + '</span></div>' +
+        '<div class="case-t">' + U.esc(c.reason) + '</div>' +
+        '<div class="case-m">' + c.order + (o ? ' · ' + o.status : '') + ' · raised ' + c.created + ' · ' + U.esc(c.via) +
+          (c.resolution ? ' · resolved ' + c.resolvedAt + ' — ' + U.esc(c.resolution) : '') + '</div>' +
+        '<div class="case-a">' +
+          (c.state === 'Open' ? U.btn('Acknowledge', { kind:'primary', act:'caseAck', arg:c.id }) : '') +
+          (c.state === 'Acknowledged' ? U.btn('Resolve', { kind:'primary', act:'caseResolve', arg:c.id }) : '') +
+          U.btn('Case', { act:'caseOpen', arg:c.id }) +
+          U.btn('Trace', { act:'trace', arg:c.order }) +
+          (c.driver && c.state !== 'Resolved' ? U.btn('Chat', { act:'chat', arg:c.driver }) : '') +
+        '</div></div>';
+    }).join('') + '</div></section>';
   }
 
   SCREENS['control-tower'] = {
@@ -168,7 +187,6 @@ window.STATE = window.STATE || {};
       const queue = all.filter(o => !o.driver || o.status === 'Assigning');
       const flight = all.filter(o => o.driver && o.status !== 'Assigning');
       const drv = ctDrivers();
-      const alerts = ctAlerts();
       const byState = {
         'Online and idle': drv.filter(x => x.online && x.status === 'Idle'),
         'On a job': drv.filter(x => x.online && x.status === 'On job'),
@@ -196,20 +214,14 @@ window.STATE = window.STATE || {};
         return '<div class="bcol"><div class="bcol-h">' + U.statusTag(st) + '<em>' + items.length + '</em></div>' +
           '<div class="bcol-b">' + (items.map(o =>
             '<button type="button" class="bcard ' + (o.late || o.stuck ? 'warn' : '') + '" data-act="ctPick" data-arg="' + o.id + '">' +
-              '<span class="bc-h"><b>' + o.id + '</b>' + (o.prio === 'High' ? U.tag('Priority', d.PAL.tang, { solid: true }) : '') + '</span>' +
+              '<span class="bc-h"><b>' + o.id + '</b>' + DEEP.slaTag(DEEP.sla(o).state) + '</span>' +
               '<span class="bc-m">' + U.esc(d.merchant(o.merchant).name) + ' · ' + d.zone(o.zone).code + '</span>' +
               '<span class="bc-m">' + (o.driver ? U.esc(d.driver(o.driver).name) : '<em class="warn">No driver</em>') + '</span>' +
               '<span class="bc-f"><em>' + (o.elapsed || '0m') + ' elapsed</em><em>ETA ' + o.eta + '</em></span>' +
             '</button>').join('') || '<div class="bcol-e">—</div>') + '</div></div>';
       }).join('') + '</div>';
 
-      const strip = alerts.length
-        ? '<section class="astrip"><div class="astrip-h"><b>Needs intervention</b><em>' + alerts.length + '</em></div>' +
-          '<div class="astrip-b">' + alerts.map(x =>
-            '<div class="astrip-i p' + x.p + '"><span class="astrip-k">' + x.k + '</span>' +
-            '<span class="astrip-t">' + U.esc(x.t) + '</span><span class="astrip-a">' + x.act + '</span></div>').join('') +
-          '</div></section>'
-        : U.note('Nothing needs intervention.', 'Every active order is moving and inside its window.', '#1f8a4c');
+      const strip = caseStrip();
 
       const vtog = '<div class="vtog">' +
         '<button type="button" class="vt ' + (f.view === 'Map' ? 'on' : '') + '" data-act="ctView" data-arg="Map">Map</button>' +
@@ -227,6 +239,7 @@ window.STATE = window.STATE || {};
             (o.prio === 'High' ? U.tag('Priority', d.PAL.tang, { solid: true }) : '') + '</div>' +
             '<div class="qi-m">' + U.esc(d.merchant(o.merchant).name) + ' · ' + U.esc(o.branch) + '</div>' +
             '<div class="qi-m">' + d.zone(o.zone).code + ' · ' + o.type + ' · ' + U.esc(o.source) + ' · waiting ' + (o.elapsed || '0m') + '</div>' +
+            '<div class="qi-m">' + DEEP.slaTag(DEEP.sla(o).state) + ' <em class="sub">promised ' + DEEP.sla(o).promisedDelivery + '</em></div>' +
             (o.offered ? '<div class="qi-m warn">Offered to ' + U.esc(d.driver(o.offered).name) + ' — not accepted</div>' : '') +
             '<div class="qi-a">' + U.btn('Assign driver', { kind: 'primary', act: 'assign', arg: o.id }) +
               U.btn('Auto assign', { act: 'autoAssign', arg: o.id }) +
@@ -254,7 +267,7 @@ window.STATE = window.STATE || {};
           '<div class="dgrp">' + st + '<em>' + flight.filter(o => o.status === st).length + '</em></div>' +
           flight.filter(o => o.status === st).map(o =>
             '<button type="button" class="ml ' + (o.late || o.stuck ? 'warn' : '') + '" data-act="ctPick" data-arg="' + o.id + '">' +
-              '<span class="ml-h"><b>' + o.id + '</b><em class="el">' + (o.elapsed || '0m') + '</em></span>' +
+              '<span class="ml-h"><b>' + o.id + '</b>' + DEEP.slaTag(DEEP.sla(o).state) + '<em class="el">' + (o.elapsed || '0m') + '</em></span>' +
               '<span class="ml-s">' + U.esc(d.driver(o.driver).name) + ' · ' + d.zone(o.zone).code + ' · ETA ' + o.eta + '</span>' +
             '</button>').join('')).join('') || '<div class="empty">Nothing in flight.</div>') + '</div>',
         { pad: false, right: '<span class="ph-note">' + flight.length + ' in flight</span>' });
@@ -274,6 +287,9 @@ window.STATE = window.STATE || {};
           fg('Source', U.select(['All sources', 'Direct', 'Marketplace', 'Dash Network'], f.source, { act: 'ctF', arg: 'source' })),
           fg('Type', U.select(['All types', 'On demand', 'Scheduled'], f.type, { act: 'ctF', arg: 'type' })),
           fg('Vehicle', U.select(['All vehicles', 'Motorcycle', 'Car', 'Van'], f.vehicle, { act: 'ctF', arg: 'vehicle' })),
+          fg('Branch', U.select(['All branches'].concat([...new Set(d.ORDERS.map(o => o.branch))].sort()), f.branch, { act: 'ctF', arg: 'branch' })),
+          fg('SLA state', U.select(['All SLA states', 'On time', 'At risk', 'Late'], f.sla, { act: 'ctF', arg: 'sla' })),
+          fg('Find an order', U.input(f.q, 'Order ID, reference or customer', { act: 'ctQ' })),
           '<span class="f-sp"></span><span class="f-c">' + all.length + ' active</span>',
           ctDirty() ? U.btn('Clear filters', { act: 'ctReset' }) : ''
         ]) +

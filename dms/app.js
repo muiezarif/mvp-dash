@@ -8,7 +8,8 @@
       { r: '/', k: 'dashboard', t: 'Dashboard', e: '04' },
       { r: '/control-tower', k: 'control-tower', t: 'Control tower', e: '17' },
       { r: '/orders', k: 'orders', t: 'Orders', e: '15' },
-      { r: '/create-order', k: 'create-order', t: 'Create order', e: '14' }
+      { r: '/create-order', k: 'create-order', t: 'Create order', e: '14' },
+      { r: '/capacity', k: 'capacity', t: 'Capacity planning', e: '08' }
     ]},
     { g: 'Fleet', items: [
       { r: '/drivers', k: 'drivers', t: 'Drivers', e: '05' },
@@ -25,6 +26,7 @@
     ]},
     { g: 'Configuration', items: [
       { r: '/assignment', k: 'assignment', t: 'Order assignment', e: '10' },
+      { r: '/sla', k: 'sla', t: 'SLA and service policy', e: '17' },
       { r: '/app-settings', k: 'app-settings', t: 'Driver app', e: '09' },
       { r: '/roles', k: 'roles', t: 'Roles and permissions', e: '21' },
       { r: '/account', k: 'account', t: 'Account settings', e: '03' },
@@ -35,6 +37,7 @@
       { r: '/reports', k: 'reports', t: 'Reports', e: '20' },
       { r: '/notifications', k: 'notifications', t: 'Notifications', e: '22' },
       { r: '/billing', k: 'billing', t: 'Billing', e: '23' },
+      { r: '/settlement', k: 'settlement', t: 'Settlement', e: '23' },
       { r: '/developer', k: 'developer', t: 'Developer', e: '24' },
       { r: '/support', k: 'support', t: 'Support', e: '25' },
       { r: '/audit', k: 'audit', t: 'Audit log', e: '26' }
@@ -98,7 +101,7 @@
     /* order filters */
     ordF: (a, el) => { STATE.orderFilter[a] = el.value; render(); },
     ordQ: (a, el) => { STATE.orderFilter.q = el.value; const p = el.selectionStart; render(); const i = document.querySelector('[data-act="ordQ"]'); if (i) { i.focus(); i.setSelectionRange(p, p); } },
-    ordReset: () => { STATE.orderFilter = { status: 'All statuses', source: 'All sources', zone: 'All zones', type: 'All types', q: '' }; render(); },
+    ordReset: () => { STATE.orderFilter = { status: 'All statuses', source: 'All sources', zone: 'All zones', type: 'All types', sla: 'All SLA states', q: '' }; render(); },
     drvF: (a, el) => { STATE.driverFilter[a] = el.value; render(); },
     drvQ: (a, el) => { STATE.driverFilter.q = el.value; const p = el.selectionStart; render(); const i = document.querySelector('[data-act="drvQ"]'); if (i) { i.focus(); i.setSelectionRange(p, p); } },
 
@@ -118,29 +121,15 @@
     ctReset: () => {
       const v = STATE.ct.view;
       STATE.ct = { view: v, city:'All cities', district:'All districts', zone:'All zones', status:'All statuses',
-        driver:'All drivers', merchant:'All merchants', source:'All sources', type:'All types', vehicle:'All vehicles' };
+        driver:'All drivers', merchant:'All merchants', source:'All sources', type:'All types', vehicle:'All vehicles',
+        sla:'All SLA states', branch:'All branches', q:'' };
       render();
     },
+    ctQ: (a, el) => { STATE.ct.q = el.value; const p = el.selectionStart; render();
+      const i = document.querySelector('[data-act="ctQ"]'); if (i) { i.focus(); i.setSelectionRange(p, p); } },
     ctPick: id => {
-      const d = D(), o = d.order(id), dr = o.driver ? d.driver(o.driver) : null;
       if (STATE.ct.view === 'Map') MAP.focusOrder(id);
-      UI.drawer('<b>' + id + '</b> — ' + o.status, [
-        '<div class="dw-meta">' + d.merchant(o.merchant).name + ' · ' + o.branch + ' → ' + d.customer(o.customer).addr + '</div>',
-        UI.defs([
-          ['Status', UI.statusTag(o.status)],
-          ['Elapsed', (o.elapsed || '0m') + (o.stuck ? ' · no update for ' + o.stuck + ' min' : '')],
-          ['ETA', o.eta + (o.late ? ' — running late' : '')],
-          ['Zone', d.zone(o.zone).code + ' — ' + d.zone(o.zone).name.split('— ')[1]],
-          ['Driver', dr ? UI.esc(dr.name) + ' · ' + UI.esc(dr.phone) : '<em class="warn">Not assigned</em>'],
-          ['Source', o.source], ['Type', o.type],
-          ['Cash on delivery', o.cod ? UI.money(o.cod) : 'Cash free']
-        ])
-      ].join(''), { footer:
-        (o.driver ? UI.btn('Reassign', { kind:'primary', act:'assign', arg:id }) : UI.btn('Assign driver', { kind:'primary', act:'assign', arg:id })) +
-        (o.driver ? UI.btn('Contact driver', { act:'chat', arg:o.driver }) : '') +
-        UI.btn('Escalate', { act:'escalate', arg:id }) +
-        UI.btn('Cancel order', { kind:'danger', act:'cancelOrder', arg:id }) +
-        UI.btn('Full history', { act:'go', arg:'/orders/' + id }) });
+      window.ACT.trace(id);
     },
     ctDriver: id => {
       const d = D(), x = d.driver(id);
@@ -380,6 +369,8 @@
     inviteDriver: () => { UI.closeDrawer(); UI.toast('Driver created — credentials sent by SMS'); }
   };
 
+  Object.assign(A, window.ACT || {});
+
   function now() { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 
   document.addEventListener('click', e => {
@@ -399,7 +390,7 @@
     const t = e.target.closest('[data-act]');
     if (!t || t.type !== 'range' && t.tagName !== 'INPUT') return;
     const act = t.getAttribute('data-act');
-    if (['asRadius', 'asCap', 'asSched', 'apDist', 'ordQ', 'drvQ'].includes(act) && A[act]) A[act](t.getAttribute('data-arg'), t);
+    if (['asRadius', 'asCap', 'asSched', 'apDist', 'ordQ', 'drvQ', 'ctQ'].includes(act) && A[act]) A[act](t.getAttribute('data-arg'), t);
   });
 
   window.addEventListener('hashchange', render);

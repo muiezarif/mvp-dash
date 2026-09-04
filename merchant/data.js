@@ -44,15 +44,28 @@ window.MER = (function () {
       caps:['Same day','Chilled','Cash on delivery'], note:'Fastest pickup in the north, priced accordingly.' }
   ];
 
-  /* Epic 10 — dispatch configuration, merchant wide */
+  /* Epic 10 — dispatch configuration. Merchant wide first; a branch may carry its own rule. */
   const DISPATCH = {
     mode: 'Pool of connected 3PLs',   // 'Dash Network only' | 'Specific 3PL' | 'Manual assignment' | 'Pool of connected 3PLs'
     specific: 'Rehla Fleet',
     poolOrder: ['p1','p0','p2'],
     poolBehaviour: 'Priority order I set',  // or 'Let Dash optimise'
     fallback: 'Fall back to Dash Network',  // 'Fall back to next in pool' | 'Fail back to me'
-    fallbackAfter: 5
+    fallbackAfter: 5,
+    /* branch id → its own rule. A branch missing here follows the merchant default. */
+    branchRules: {
+      b3: { mode:'Specific 3PL', specific:'Sahel Logistics', fallback:'Fall back to Dash Network', fallbackAfter:4,
+            why:'Olaya sits inside Sahel’s cheapest zone', by:'Omar Sabri · 18 Aug 2026' },
+      b4: { mode:'Dash Network only', fallback:'Fall back to Dash Network', fallbackAfter:5,
+            why:'Reduced hours — nobody on site to steer a provider', by:'Rana Al Zahrani · 2 Sep 2026' }
+    }
   };
+
+  /* The rule an order from this branch is actually dispatched by. */
+  function dispatchFor(bid) {
+    const r = DISPATCH.branchRules[bid];
+    return Object.assign({}, DISPATCH, r || {}, { own: !!r, src: r ? 'Branch rule' : 'Merchant default' });
+  }
 
   const INTEGRATIONS = [
     { id:'i1', n:'Salla', kind:'Platform connector', status:'Connected', synced:'12 s ago', orders:1284, health:'Healthy',
@@ -258,12 +271,16 @@ window.MER = (function () {
     scheduled: [
       { n:'Daily order summary', to:'ops@kanzmarket.sa', when:'Every day 23:45', fmt:'PDF' },
       { n:'Weekly branch performance', to:'sara@kanzmarket.sa', when:'Sunday 08:00', fmt:'CSV' },
-      { n:'Monthly spending', to:'finance@kanzmarket.sa', when:'1st of the month', fmt:'PDF' }
+      { n:'Monthly spending', to:'finance@kanzmarket.sa', when:'1st of the month', fmt:'PDF' },
+      { n:'SLA performance and missed promises', to:'sara@kanzmarket.sa', when:'Sunday 08:00', fmt:'Excel' },
+      { n:'Failures and root cause', to:'ops@kanzmarket.sa', when:'Sunday 08:00', fmt:'PDF' },
+      { n:'Settlement and reconciliation', to:'finance@kanzmarket.sa', when:'Monday 07:00', fmt:'Excel' }
     ]
   };
 
   return { PAL, BIZ, CITIES, BRANCHES, PROVIDERS, DISPATCH, INTEGRATIONS, CUSTOMERS, STATUS, FLOW, ORDERS,
            WALLET, PLANS, NOTIFS, AUDIT, TICKETS, REPORTS,
+           dispatchFor,
            branch: id => BRANCHES.find(b => b.id === id),
            prov: id => PROVIDERS.find(p => p.id === id),
            customer: id => CUSTOMERS.find(c => c.id === id),

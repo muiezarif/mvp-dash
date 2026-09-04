@@ -19,7 +19,8 @@
     ]},
     { g: 'Insight', items: [
       { r: '/analytics', k: 'analytics', t: 'Performance and analytics', e: '11' },
-      { r: '/billing', k: 'billing', t: 'Billing and payouts', e: '16' }
+      { r: '/billing', k: 'billing', t: 'Billing and payouts', e: '16' },
+      { r: '/settlement', k: 'settlement', t: 'Settlement', e: '16' }
     ]},
     { g: 'Account and platform', items: [
       { r: '/roles', k: 'roles', t: 'Roles and permissions', e: '14' },
@@ -75,7 +76,7 @@
   }
   const now = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
-  const A = {
+  const A = window.ACT = Object.assign(window.ACT || {}, {
     go: a => { location.hash = '#' + a; },
     closeDrawer: () => UI.closeDrawer(),
     stub: a => UI.toast(a || 'Read only in Dash — do this in Sahel OMS'),
@@ -97,10 +98,12 @@
     ctReset: () => {
       const v = STATE.ct.view;
       STATE.ct = { view: v, city:'All cities', district:'All districts', status:'All statuses',
-        merchant:'All merchants', source:'All sources', type:'All types' };
+        merchant:'All merchants', source:'All sources', type:'All types', sla:'All SLA states', q:'' };
       render();
     },
-    ctPick: id => { location.hash = '#/orders/' + id; },
+    ctQ: (a, el) => { STATE.ct.q = el.value; const p = el.selectionStart; render();
+      const i = document.querySelector('[data-act="ctQ"]'); if (i) { i.focus(); i.setSelectionRange(p, p); } },
+    ctPick: id => { window.ACT.tTrace(id); },
 
     mapLayer: (a, el) => { const on = !el.classList.contains('on'); el.classList.toggle('on', on); MAP.toggleLayer(a, on); },
     focusOrder: a => MAP.focusOrder(a),
@@ -252,7 +255,7 @@
     npOverflow: (a, el) => { STATE.np.overflow = !STATE.np.overflow; el.classList.toggle('on', STATE.np.overflow); },
     npCommercial: (a, el) => { STATE.np.commercial = !STATE.np.commercial; el.classList.toggle('on', STATE.np.commercial); },
     npSystem: (a, el) => { STATE.np.system = !STATE.np.system; el.classList.toggle('on', STATE.np.system); }
-  };
+  });
 
   document.addEventListener('click', e => {
     const t = e.target.closest('[data-act]');
@@ -271,7 +274,7 @@
     const t = e.target.closest('[data-act]');
     if (!t) return;
     const act = t.getAttribute('data-act');
-    if (['ofQ'].includes(act) && A[act]) A[act](t.getAttribute('data-arg'), t);
+    if (['ofQ', 'ctQ'].includes(act) && A[act]) A[act](t.getAttribute('data-arg'), t);
   });
 
   window.addEventListener('hashchange', render);

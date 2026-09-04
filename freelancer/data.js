@@ -107,7 +107,15 @@ window.FRL = (function () {
     { k:'Account', t:'Your documents are verified until Dec 2026', d:'3 days ago', sev:'low', link:'profile' }
   ];
 
+  const ISSUES = [
+    { id:'IC-3126', order:'DX-41088', reason:'Wrong address or customer changed location', note:'Customer moved the pin two blocks after I collected',
+      at:'Yesterday 20:14', state:'Resolved', owner:'Dash Support · Reem', reply:'New address confirmed and the fare adjusted for the extra 2.1 km', closed:'Yesterday 20:26' }
+  ];
+
   const REASONS = {
+    issue: ['Customer unavailable or cannot contact customer', 'Merchant delay or order not ready',
+            'Wrong address or customer changed location', 'Vehicle problem or accident',
+            'Order or item issue', 'COD or payment issue', 'Other'],
     cancel: ['Order not ready at pickup', 'Merchant cancelled', 'Wrong or incomplete address', 'Vehicle problem', 'I can no longer make the time'],
     fail: ['Customer unreachable', 'Nobody at the address', 'Customer refused delivery', 'Address could not be found', 'Customer had no cash for COD']
   };
@@ -121,6 +129,6 @@ window.FRL = (function () {
     { t:'Go online', s:'You decide when — no shifts', done:true }
   ];
 
-  return { PAL, ME, TERMS, FLOW, NEXT, CTA, OFFERS, ORDERS, HISTORY, WALLET, CHAT, NOTIFS, REASONS, SIGNUP,
+  return { PAL, ME, TERMS, FLOW, NEXT, CTA, OFFERS, ORDERS, HISTORY, WALLET, CHAT, NOTIFS, REASONS, ISSUES, SIGNUP,
            order: id => ORDERS.find(o => o.id === id) };
 })();

@@ -22,9 +22,9 @@ window.SCREENS = window.SCREENS || {};
         return { ok: true, t: (s.poolBehaviour === 'Let Dash optimise' ? 'Dash picks the best of your ' + s.poolOrder.length + ' providers' : first.name + ' first, then ' + s.poolOrder.slice(1).map(x => d.prov(x).name).join(', ')) };
       };
 
-      return U.page('Dispatch configuration', 'Merchant wide — who gets your orders, in what order, and what happens when nobody takes them',
+      return U.page('Dispatch configuration', 'Merchant wide by default — and a branch can carry its own rule where its neighbourhood needs one',
         U.btn('Save changes', { kind: 'primary', act: 'saveDispatch' })) + `
-        ${U.note('Default on signup is Dash Network only.', 'Zero configuration: Dash finds a fleet, a 3PL or a freelancer for every order. Everything below is an opt-in for merchants who want to steer it.', d.PAL.vodka)}
+        ${U.note('Default on signup is Dash Network only.', 'Zero configuration: Dash finds a fleet, a 3PL or a freelancer for every order. Everything below is an opt-in for merchants who want to steer it. The rules on this page apply to all four branches unless a branch overrides them.', d.PAL.vodka)}
         <div class="cols c-2-1">
           <div class="stack">
             ${U.panel('Mode', `
@@ -87,6 +87,25 @@ window.SCREENS = window.SCREENS || {};
               </div>
               ${U.note('No silent dead ends.', 'Whatever you pick, an order can never quietly stop moving — the last step in that chain always notifies you.', d.PAL.lemon)}`
               : U.note('Dash Network is the fallback.', 'With Network-only dispatch there is nothing to fall back from — Dash keeps trying until someone takes it.', d.PAL.vodka))}
+
+            ${U.panel('Per branch', `
+              ${U.note('Global first, branch second.', 'Every branch starts on the rules above. Give a branch its own rule only where the neighbourhood, the hours or the price make the merchant-wide rule wrong — two of four here do.', d.PAL.lav)}
+              ${U.table(
+                [{ t: 'Branch' }, { t: 'District' }, { t: 'Rule in force' }, { t: 'If nobody takes it' }, { t: 'Set by' }, { t: '', w: '210px' }],
+                d.BRANCHES.map(b => { const r = d.dispatchFor(b.id); return { cells: [
+                  '<b>' + U.esc(b.name) + '</b><em class="sub"> ' + b.code + '</em>', U.esc(b.district),
+                  r.own
+                    ? U.tag('Branch rule', d.PAL.lemon, { solid: true }) + ' ' + U.select(modes, r.mode, { act: 'dsBranchMode', arg: b.id }) +
+                      (r.mode === 'Specific 3PL' ? ' ' + U.select(connected.map(p => p.name), r.specific, { act: 'dsBranchProv', arg: b.id }) : '') +
+                      (r.why ? '<em class="sub">' + U.esc(r.why) + '</em>' : '')
+                    : '<em class="sub">Follows the merchant default — ' + U.esc(s.mode.toLowerCase()) + '</em>',
+                  r.mode === 'Dash Network only' ? '<em class="sub">Dash keeps trying</em>'
+                    : U.esc(r.fallback.toLowerCase()) + '<em class="sub"> after ' + r.fallbackAfter + ' min</em>',
+                  '<em class="sub">' + U.esc(r.own ? r.by : 'Merchant default') + '</em>',
+                  '<div class="rowact">' + (r.own
+                    ? U.btn('Reset to default', { act: 'dsBranchReset', arg: b.id })
+                    : U.btn('Give it its own rule', { act: 'dsBranchAdd', arg: b.id })) + '</div>'
+                ] }; }))}`, { pad: false })}
           </div>
           <div class="stack">
             ${U.panel('What happens to today’s orders', `<div class="sim">
@@ -267,6 +286,26 @@ window.SCREENS = window.SCREENS || {};
               </div>
             </section>`).join('')}
         </div>
+        ${U.panel('Connection health', U.table(
+          [{ t: 'Source' }, { t: 'Connection' }, { t: 'State' }, { t: 'Last successful sync' }, { t: 'Orders that failed to arrive', num: true },
+           { t: 'What went wrong' }, { t: 'Dash → you' }, { t: '', w: '190px' }],
+          MDEEP.CONNS.map(c => ({ cells: [
+            '<b>' + U.esc(c.n) + '</b>', c.k,
+            U.tag(c.s, c.s === 'Connected' ? '#1f8a4c' : c.s === 'Error' ? d.PAL.tang : '#c9c9c9', { solid: c.s === 'Error' }),
+            c.last, c.fails || '—',
+            c.err ? '<em class="warn">' + U.esc(c.err) + '</em>' : '<em class="sub">Nothing</em>',
+            U.esc(c.hook),
+            '<div class="rowact">' + (c.s === 'Error'
+              ? U.btn('Reconnect ' + c.n, { kind: 'primary', act: 'stub', arg: 'Reconnect ' + c.n + ' — the ' + c.fails + ' held orders are reprocessed automatically' })
+              : c.s === 'Not connected' ? U.btn('Connect', { act: 'stub', arg: 'Connect ' + c.n })
+              : U.btn('Test', { act: 'stub', arg: 'Test call to ' + c.n + ' — 200 OK' })) + '</div>'] }))),
+          { pad: false, right: '<span class="ph-note">Is it working, and if not, since when</span>' })}
+        ${U.panel('Orders that did not arrive', U.table(
+          [{ t: 'Time' }, { t: 'Source' }, { t: 'External ID' }, { t: 'Your reference' }, { t: 'What went wrong' }, { t: '', w: '150px' }],
+          MDEEP.FAILED.map(f => ({ cells: [f.t, U.esc(f.c), '<code>' + f.x + '</code>', '<code>' + U.esc(f.ref) + '</code>',
+            '<em class="warn">' + U.esc(f.e) + '</em>',
+            '<div class="rowact">' + U.btn('Retry', { act: 'stub', arg: f.x + ' reprocessed' }) + '</div>'] }))),
+          { pad: false, right: '<span class="ph-note">These are real orders your customers placed — they are not in Dash yet</span>' })}
         ${U.panel('Sync activity', U.table(
           [{ t: 'Time' }, { t: 'Source' }, { t: 'Event' }, { t: 'Result' }, { t: 'Order' }],
           [['15:44:02', 'Salla', 'Order created', '201', 'DX-41074'],

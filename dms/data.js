@@ -156,6 +156,26 @@ window.DMS = (function () {
       contract:null }
   ];
 
+  /* Each merchant's own sites. DMS reads them — dispatch, pricing and SLA all key off the branch. */
+  const BR_D = ['Hittin','Al Yasmin','Olaya','Al Malqa','Al Nakheel','Al Sahafah','Qurtubah','Al Aqiq','Al Rabi','Al Wadi','Al Ghadir','Al Izdihar'];
+  const BR_M = ['Yasser Al Otaibi','Nada Al Harbi','Omar Sabri','Rana Al Zahrani','Faisal Al Amri','Huda Al Qahtani'];
+  MERCHANTS.forEach((m, mi) => {
+    m.branchList = Array.from({ length: m.branches }, (_, i) => {
+      const dist = BR_D[(i + mi * 3) % BR_D.length];
+      return {
+        code: dist.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase(),
+        name: m.name.split(' — ')[0] + ' — ' + dist,
+        district: dist,
+        zone: ['RYD-N','RYD-C','RYD-E','RYD-S','RYD-W'][(i + mi) % 5],
+        hours: i % 3 === 2 ? '09:00 – 22:00' : '07:00 – 23:00',
+        mgr: BR_M[(i + mi) % BR_M.length],
+        orders: Math.max(3, Math.round(m.volume / m.branches) + ((i * 5 + mi * 7) % 9) - 4),
+        onTime: 88 + ((i * 3 + mi * 5) % 10),
+        status: m.status !== 'Connected' ? 'Not live yet' : (i === 3 ? 'Reduced hours' : 'Open')
+      };
+    });
+  });
+
   const CUSTOMERS = [
     { id:'c1', name:'Layla A.', phone:'+966 50 220 1188', orders:34, success:97, flagged:false, addr:'Al Yasmin, block 4', note:'' },
     { id:'c2', name:'Hassan M.', phone:'+966 55 771 4420', orders:12, success:83, flagged:true, addr:'Al Malaz, King Abdullah Rd', note:'Two refused deliveries — call before dispatch' },
@@ -268,7 +288,10 @@ window.DMS = (function () {
     scheduled: [
       { n:'Daily order summary', to:'ops@rehla.sa', when:'Every day 23:45', fmt:'PDF' },
       { n:'Weekly driver performance', to:'sara@rehla.sa', when:'Sunday 08:00', fmt:'CSV' },
-      { n:'COD reconciliation', to:'finance@rehla.sa', when:'Daily 22:00', fmt:'CSV' }
+      { n:'COD reconciliation', to:'finance@rehla.sa', when:'Daily 22:00', fmt:'CSV' },
+      { n:'SLA performance and breaches', to:'ops@rehla.sa', when:'Sunday 08:00', fmt:'Excel' },
+      { n:'Intervention and root cause', to:'sara@rehla.sa', when:'Sunday 08:00', fmt:'PDF' },
+      { n:'Settlement and reconciliation', to:'finance@rehla.sa', when:'Monday 07:00', fmt:'Excel' }
     ]
   };
 

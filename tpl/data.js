@@ -269,7 +269,10 @@ window.TPL = (function () {
     scheduled: [
       { n:'Daily Dash order summary', to:'ops@sahel-logistics.sa', when:'Every day 23:45', fmt:'PDF' },
       { n:'Weekly merchant performance', to:'faisal@sahel-logistics.sa', when:'Sunday 08:00', fmt:'CSV' },
-      { n:'Monthly revenue and commission', to:'finance@sahel-logistics.sa', when:'1st of the month', fmt:'PDF' }
+      { n:'Monthly revenue and commission', to:'finance@sahel-logistics.sa', when:'1st of the month', fmt:'PDF' },
+      { n:'SLA performance and penalties', to:'ops@sahel-logistics.sa', when:'Sunday 08:00', fmt:'Excel' },
+      { n:'Failures and root cause', to:'faisal@sahel-logistics.sa', when:'Sunday 08:00', fmt:'PDF' },
+      { n:'Settlement and reconciliation', to:'finance@sahel-logistics.sa', when:'Monday 07:00', fmt:'Excel' }
     ]
   };
 

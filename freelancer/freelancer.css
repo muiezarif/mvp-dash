@@ -323,3 +323,16 @@ a{color:var(--lemon);text-decoration:none}
 .radar.off{background:#080808}
 .radar.off .rd-c{background:#3A3A3A}
 .radar.off .rd-t{color:var(--dim)}
+
+
+/* ---------- report an issue ---------- */
+.btn.help{border-color:var(--lemon);color:var(--lemon);background:rgba(255,238,80,.06);font-weight:600}
+.pick.help button:active,.pick.help button.on{background:var(--lemon);color:#000;border-color:var(--lemon)}
+.issue{border:1px solid var(--line);border-left:3px solid var(--lemon);padding:11px 12px;margin-bottom:10px;display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.issue.closed{border-left-color:#7BD389;opacity:.8}
+.issue-h{display:flex;align-items:center;gap:8px;width:100%}
+.issue-h b{font-size:13px;flex:1;min-width:0}
+.issue em{font-style:normal;font-size:12.5px;color:#fff}
+.issue span{font-size:12px;color:var(--dim)}
+.issue span.mono{font:500 10.5px var(--mono);color:var(--faint);letter-spacing:.04em}
+.issue .btn.sm{margin-top:3px}

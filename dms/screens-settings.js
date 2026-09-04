@@ -100,6 +100,15 @@ window.SCREENS = window.SCREENS || {};
             ['Status', U.tag(m.contract.status, m.contract.status === 'Active' ? '#1f8a4c' : d.PAL.peach, { solid: m.contract.status !== 'Active' })]
           ]) : '<div class="empty">No contract yet — approve the connection request first.</div>')}
         </div>
+        ${U.panel('Branches · ' + m.branches, (m.branchList || []).length ? U.table(
+          [{ t: 'Code' }, { t: 'Branch' }, { t: 'District' }, { t: 'Zone' }, { t: 'Hours' }, { t: 'Manager' },
+           { t: 'Orders/day', num: true }, { t: 'On time', num: true }, { t: 'State' }],
+          m.branchList.map(b => ({ cells: [
+            `<code>${b.code}</code>`, `<b>${U.esc(b.name)}</b>`, U.esc(b.district), b.zone, b.hours, U.esc(b.mgr),
+            b.orders, b.onTime + '%',
+            U.tag(b.status, b.status === 'Open' ? '#1f8a4c' : d.PAL.peach, { solid: b.status !== 'Open' })] })))
+          : '<div class="empty">No branches — this merchant ships from a single address.</div>',
+          { pad: false, right: '<span class="ph-note">Their sites. Dispatch and pricing read the branch; DMS does not edit it</span>' })}
         ${U.panel('Order history', U.table(
           [{ t: 'Order' }, { t: 'Branch' }, { t: 'Zone' }, { t: 'Source' }, { t: 'Status' }, { t: 'Price', num: true }, { t: 'Created' }],
           orders.map(o => ({ act: 'go', arg: '/orders/' + o.id, cells: [

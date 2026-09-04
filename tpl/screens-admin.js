@@ -163,6 +163,82 @@ window.SCREENS = window.SCREENS || {};
             o.by === '—' ? '<em class="sub">—</em>' : U.esc(o.by), o.cost ? U.money(o.cost) : '—'] }))), { pad: false })}
         ${U.note('Overflow is cheaper than losing a merchant.', 'You paid ' + U.money(d.NETWORK.demand.cost) + ' this month to have work carried for you, and kept contracts worth far more.', d.PAL.peach)}`;
 
+      const slaRep = `
+        <div class="kpis k-4">
+          ${U.kpi('Promise met', '93.8%', '857 of 914 orders', '#1f8a4c')}
+          ${U.kpi('Promise missed', '57', '6.2% — above the 5% in your contracts', d.PAL.tang)}
+          ${U.kpi('Average miss', '16 min', 'Past the promised delivery time', d.PAL.peach)}
+          ${U.kpi('Penalties charged', U.money(-34), 'Deducted from your last payout', d.PAL.tang)}
+        </div>
+        <div class="cols c-1-1">
+          ${U.panel('On time by merchant', U.table([{ t: 'Merchant' }, { t: 'Promise' }, { t: 'Orders', num: true }, { t: 'On time', w: '140px' }, { t: 'Missed', num: true }],
+            d.MERCHANTS.filter(m => m.orders).map(m => { const ot = 88 + (m.orders % 10);
+              return { act: 'go', arg: '/merchants/' + m.id, cells: [U.esc(m.name),
+                m.name === 'Tamra Pharmacy' ? '35 min · your contract' : '45 min · Dash standard',
+                m.orders, ot + '% ' + U.bar(ot, ot >= 93 ? d.PAL.lav : d.PAL.tang), Math.round(m.orders * (100 - ot) / 100)] }; })), { pad: false })}
+          ${U.panel('Why you missed the promise', `<div class="blist">${[['Status pushed late by your OMS', 34],
+            ['No driver free in the zone', 27], ['Traffic and distance', 21], ['Merchant not ready', 12], ['Failed first attempt', 6]]
+            .map(([k, v]) => '<div class="bl"><span>' + k + '</span>' + U.bar(v, d.PAL.tang) + '<b>' + v + '%</b></div>').join('')}</div>
+            <div class="legend">A third of your breaches are not late deliveries at all — they are late status pushes. Fix the connection and the number falls.</div>`, { pad: false })}
+        </div>
+        ${U.panel('Orders that missed the promise', U.table(
+          [{ t: 'Order' }, { t: 'Merchant' }, { t: 'Zone' }, { t: 'Promised' }, { t: 'Missed by' }, { t: 'Penalty', num: true }],
+          d.ORDERS.filter(o => TDEEP.sla(o).state === 'Late').map(o => { const s = TDEEP.sla(o), st = TDEEP.settle(o);
+            return { act: 'tTrace', arg: o.id, cells: ['<b>' + o.id + '</b>', U.esc(d.merchant(o.merchant).name), o.zone,
+              s.promisedDelivery, '<b style="color:#b0432a">' + TDEEP.dur(Math.max(1, s.over)) + '</b>',
+              st.adj < 0 ? '<b style="color:#b0432a">−' + U.money(Math.abs(st.adj)) + '</b>' : '—'] }; })), { pad: false,
+          right: '<span class="ph-note">Measured against the promise Dash holds you to</span>' })}`;
+
+      const rootRep = `
+        <div class="kpis k-4">
+          ${U.kpi('Failed deliveries', '38', '4.2% of orders in range', d.PAL.tang)}
+          ${U.kpi('Returned to merchants', '22', 'Return leg paid at 50%', d.PAL.peach)}
+          ${U.kpi('Offers you did not accept', '19%', 'Timed out or declined', d.PAL.flax)}
+          ${U.kpi('Tickets raised against you', '11', '8 closed in your favour', d.PAL.lav)}
+        </div>
+        <div class="cols c-1-1">
+          ${U.panel('Root cause of failures', `<div class="blist">${[['Customer unavailable', 31], ['Wrong or changed address', 22],
+            ['Merchant not ready', 17], ['No vehicle of the right type', 15], ['Vehicle problem', 9], ['Item issue', 6]]
+            .map(([k, v]) => '<div class="bl"><span>' + k + '</span>' + U.bar(v, d.PAL.vodka) + '<b>' + v + '%</b></div>').join('')}</div>`, { pad: false })}
+          ${U.panel('Offers you lost', U.table([{ t: 'Order' }, { t: 'What happened' }, { t: 'Where it went' }],
+            d.ORDERS.filter(o => TDEEP.offersFor(o.id).some(f => f.who.startsWith('You') && f.out !== 'Accepted'))
+              .map(o => { const mine = TDEEP.offersFor(o.id).find(f => f.who.startsWith('You'));
+                const other = TDEEP.offersFor(o.id).find(f => !f.who.startsWith('You'));
+                return { act: 'tTrace', arg: o.id, cells: ['<b>' + o.id + '</b>',
+                  U.tag(mine.out, d.PAL.tang, { solid: true }) + ' <em class="sub">' + U.esc(mine.sub) + '</em>',
+                  other ? U.esc(other.who) + ' <em class="sub">' + other.out.toLowerCase() + '</em>' : '<em class="sub">Rerouted by Dash</em>'] }; })), { pad: false,
+            right: '<span class="ph-note">Every timeout is revenue that went to another provider</span>' })}
+        </div>
+        ${U.panel('Failures by zone', U.table([{ t: 'Zone' }, { t: 'Orders', num: true }, { t: 'Failed', num: true },
+          { t: 'Returned', num: true }, { t: 'Most common cause' }],
+          d.REPORTS.zones.map((z, i) => ({ cells: [z.z, z.orders, Math.round(z.orders * (100 - z.onTime) / 100), Math.max(1, 6 - i),
+            ['Customer unavailable', 'Wrong address', 'Merchant not ready', 'No vehicle of the right type', 'Customer unavailable'][i] || 'Customer unavailable'] }))), { pad: false })}`;
+
+      const settleRep = `
+        <div class="kpis k-4">
+          ${U.kpi('Gross in range', U.money(5988), '296 delivered orders', d.PAL.peach)}
+          ${U.kpi('Dash commission', U.money(-191.6), '8% on Network orders only', d.PAL.tang)}
+          ${U.kpi('Penalties and adjustments', U.money(-34), 'SLA breaches and return legs', d.PAL.tang)}
+          ${U.kpi('Net payout', U.money(5762.4), 'SP-2026-W35 · Sunday 30 Aug', '#1f8a4c')}
+        </div>
+        ${U.panel('Reconciliation by settlement period', U.table(
+          [{ t: 'Cycle' }, { t: 'Range' }, { t: 'Orders', num: true }, { t: 'Gross', num: true }, { t: 'Commission', num: true },
+           { t: 'Adjustments', num: true }, { t: 'Net payout', num: true }, { t: 'COD you owe', num: true }, { t: 'State' }],
+          TDEEP.PERIODS.map(p => ({ act: 'tStatement', arg: p.id, cells: ['<b>' + p.id + '</b>', p.label, p.orders,
+            U.money(p.gross), '<b style="color:#b0432a">−' + U.money(p.commission) + '</b>',
+            '<b style="color:#b0432a">' + U.money(p.adj) + '</b>', '<b>' + U.money(TDEEP.net(p)) + '</b>', U.money(p.cod),
+            U.tag(p.state, TDEEP.SETTLE_STATE[p.state], { solid: p.state !== 'Settled' })] }))), { pad: false })}
+        ${U.panel('Margin by source', U.table(
+          [{ t: 'Source' }, { t: 'Orders', num: true }, { t: 'Gross', num: true }, { t: 'Commission', num: true }, { t: 'Net per order', num: true }, { t: 'Who prices it' }],
+          [['Marketplace — your own merchants', 612, 12820, 0, 'You, by contract'],
+           ['Dash Network — supply role', 248, 3820, 305.6, 'Dash rate card'],
+           ['Direct — merchant asked for you', 54, 1210, 0, 'You, by contract']]
+            .map(([s, n, g, c, w]) => ({ cells: [U.esc(s), n, U.money(g),
+              c ? '<b style="color:#b0432a">−' + U.money(c) + '</b>' : '<em class="sub">None</em>',
+              '<b>' + U.money((g - c) / n) + '</b>', '<em class="sub">' + U.esc(w) + '</em>'] }))), { pad: false,
+          right: '<span class="ph-note">Network volume costs you 8% — it is also the volume you did not have to sell for</span>' })}
+        ${U.note('These are the same numbers the merchant sees.', 'Dash holds one record per order. Your payable and their receivable are two views of it, so a disagreement is about the record rather than whose spreadsheet is right.', d.PAL.lav)}`;
+
       return U.page('Performance and analytics', 'Dash orders only — filter, export, or have it emailed',
         U.btn('Export CSV', { kind: 'primary', act: 'export', arg: 'report' }) + U.btn('Export PDF', { act: 'export', arg: 'report-pdf' }) +
         U.btn('Schedule by email', { act: 'scheduleReport' })) +
@@ -174,8 +250,10 @@ window.SCREENS = window.SCREENS || {};
           `<span class="f-l">Source</span>` + U.select(['All sources', 'Marketplace', 'Dash Network', 'Direct'], 'All sources', { act: 'stub' }),
           `<span class="f-sp"></span><span class="f-c">914 orders in range</span>`
         ])}
-        ${U.tabs(['Performance', 'Revenue', 'Zones', 'Overflow'], tab, 'reportTab')}
-        ${tab === 'Revenue' ? rev : tab === 'Zones' ? zones : tab === 'Overflow' ? over : perf}
+        ${U.tabs(['Performance', 'SLA performance', 'Failures and root cause', 'Revenue', 'Settlement', 'Zones', 'Overflow'], tab, 'reportTab')}
+        ${tab === 'SLA performance' ? slaRep : tab === 'Failures and root cause' ? rootRep :
+          tab === 'Revenue' ? rev : tab === 'Settlement' ? settleRep :
+          tab === 'Zones' ? zones : tab === 'Overflow' ? over : perf}
         ${U.panel('Scheduled reports', U.table(
           [{ t: 'Report' }, { t: 'Recipients' }, { t: 'Schedule' }, { t: 'Format' }, { t: '', w: '150px' }],
           d.REPORTS.scheduled.map(s => ({ cells: [U.esc(s.n), U.esc(s.to), U.esc(s.when), s.fmt,
@@ -306,6 +384,25 @@ window.SCREENS = window.SCREENS || {};
         U.btn('Generate key', { kind: 'primary', act: 'genKey' }) + U.btn('Open documentation', { act: 'stub', arg: 'Opens the Dash Developer Portal' })) +
         U.mode('rw', 'For a 3PL the integration is the product. Orders in, statuses out, all machine to machine.') + `
         ${U.note(U.esc(d.BIZ.ownSystem) + ' is connected.', 'Orders pull in on order.created, and your OMS posts statuses back. Nobody at Sahel opens this dashboard to work an order.', '#1f8a4c')}
+        ${U.note('Your status pushes are being rejected.', '26 calls have failed since 13:22 with a 401 — the signing key on your side no longer matches the one Dash holds. Every order your drivers are moving looks stuck to Dash and to the merchant until this is fixed.', d.PAL.tang)}
+        ${U.panel('Connection health', U.table(
+          [{ t: 'Connection' }, { t: 'Direction' }, { t: 'State' }, { t: 'Last success' }, { t: 'Failed calls', num: true }, { t: 'What went wrong' }, { t: 'Delivery' }, { t: '', w: '160px' }],
+          TDEEP.CONNS.map(c => ({ cells: [
+            '<b>' + U.esc(c.n) + '</b>', '<em class="sub">' + U.esc(c.k) + '</em>',
+            U.tag(c.s, c.s === 'Connected' ? '#1f8a4c' : c.s === 'Error' ? d.PAL.tang : d.PAL.peach, { solid: c.s !== 'Connected' }),
+            c.last, c.fails || '—',
+            c.err ? '<em class="warn">' + U.esc(c.err) + '</em>' : '<em class="sub">Nothing</em>',
+            U.esc(c.hook),
+            '<div class="rowact">' + (c.s === 'Connected'
+              ? U.btn('Test', { act: 'stub', arg: 'Test call — 200 OK' })
+              : U.btn('Reprocess ' + (c.fails || 'all'), { kind: 'primary', act: 'stub', arg: 'Queued — the failed calls replay once your key matches' })) + '</div>'] }))),
+          { pad: false, right: '<span class="ph-note">Is it working, and if not, since when</span>' })}
+        ${U.panel('Calls that failed', U.table(
+          [{ t: 'Time' }, { t: 'Dash order' }, { t: 'Your reference' }, { t: 'What went wrong' }, { t: 'Consequence' }, { t: '', w: '150px' }],
+          TDEEP.FAILED.map(f => ({ cells: [f.t, '<b>' + f.o + '</b>', '<code>' + U.esc(f.x) + '</code>',
+            '<em class="warn">' + U.esc(f.e) + '</em>', '<em class="sub">' + U.esc(f.fix) + '</em>',
+            '<div class="rowact">' + U.btn('Retry', { act: 'stub', arg: f.o + ' status replayed' }) + '</div>'] }))),
+          { pad: false })}
         <div class="cols c-2-1">
           <div class="stack">
             ${U.panel('API keys', U.table(

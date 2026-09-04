@@ -180,6 +180,78 @@ window.SCREENS = window.SCREENS || {};
           Math.round(z.orders * 7 / z.drivers.length), `${z.onTime}% ${U.bar(z.onTime, z.color)}`, z.avgPickup + 'm',
           U.tag(z.status, z.status === 'Active' ? '#1f8a4c' : d.PAL.peach)] }))), { pad: false });
 
+      const slaRep = `
+        <div class="kpis k-4">
+          ${U.kpi('Met the promise', '95.9%', '1,339 of 1,396 orders', '#1f8a4c')}
+          ${U.kpi('Breaches', '57', '4.1% of orders in range', d.PAL.tang)}
+          ${U.kpi('Avg breach size', '14 min', 'Past the promised delivery time', d.PAL.peach)}
+          ${U.kpi('Worst zone', 'RYD-W', '88% on time against a 60 min promise', d.PAL.lav)}
+        </div>
+        <div class="cols c-1-1">
+          ${U.panel('Breaches by cause', `<div class="blist">${[['Assignment delay', 41, 23], ['Merchant not ready', 28, 16],
+            ['Traffic and distance', 17, 10], ['Failed first attempt', 9, 5], ['Customer unavailable', 5, 3]]
+            .map(([k, p, n]) => '<div class="bl"><span>' + k + '</span>' + U.bar(p, d.PAL.tang) + '<b>' + n + '</b></div>').join('')}</div>
+            <div class="legend">Assignment delay is the single biggest cause — every one of those 23 orders sat unassigned past the at-risk threshold.</div>`, { pad: false })}
+          ${U.panel('On time by merchant', U.table([{ t: 'Merchant' }, { t: 'Promise' }, { t: 'Orders', num: true }, { t: 'On time', w: '140px' }, { t: 'Breaches', num: true }],
+            d.MERCHANTS.filter(m => m.status === 'Connected').map(m => { const ot = 90 + (m.volume % 9);
+              return { cells: [U.esc(m.name), m.name === 'Tamra Pharmacy' ? '35 min · exception' : '45 min',
+                m.volume * 7, ot + '% ' + U.bar(ot, ot >= 95 ? '#1f8a4c' : d.PAL.peach), Math.round(m.volume * 7 * (100 - ot) / 100)] }; })), { pad: false })}
+        </div>
+        ${U.panel('Breached orders in range', U.table(
+          [{ t: 'Order' }, { t: 'Merchant' }, { t: 'Zone' }, { t: 'Promised' }, { t: 'Over by' }, { t: 'Cause' }, { t: 'Case' }],
+          d.ORDERS.filter(o => DEEP.sla(o).state === 'Late').map(o => { const s = DEEP.sla(o), c = DEEP.casesFor(o.id)[0];
+            return { act: 'trace', arg: o.id, cells: ['<b>' + o.id + '</b>', U.esc(d.merchant(o.merchant).name), d.zone(o.zone).code,
+              s.promisedDelivery, '<b style="color:#b0432a">' + DEEP.dur(Math.max(1, s.over)) + '</b>',
+              o.stuck ? 'No movement at ' + o.status.toLowerCase() : o.driver ? 'Traffic and distance' : 'Assignment delay',
+              c ? c.id + ' · ' + c.state : '—'] }; })), { pad: false,
+          right: '<span class="ph-note">Reads the same SLA policy the control tower does</span>' })}`;
+
+      const rootRep = `
+        <div class="kpis k-4">
+          ${U.kpi('Cases raised', DEEP.CASES().length, 'In the current shift', d.PAL.lemon)}
+          ${U.kpi('Acknowledged', DEEP.CASES().filter(c => c.state === 'Acknowledged').length, 'Someone owns them', d.PAL.lav)}
+          ${U.kpi('Resolved', DEEP.CASES().filter(c => c.state === 'Resolved').length, 'Closed with a resolution', '#1f8a4c')}
+          ${U.kpi('Median time to acknowledge', '3 min', 'From raised to claimed', d.PAL.peach)}
+        </div>
+        <div class="cols c-1-1">
+          ${U.panel('Root cause of failures', `<div class="blist">${[['Customer unavailable', 34], ['Merchant delay or not ready', 26],
+            ['Wrong or changed address', 18], ['No supply in zone', 12], ['Vehicle problem', 6], ['Item issue', 4]]
+            .map(([k, v]) => '<div class="bl"><span>' + k + '</span>' + U.bar(v, d.PAL.vodka) + '<b>' + v + '%</b></div>').join('')}</div>`, { pad: false })}
+          ${U.panel('Where cases come from', U.table([{ t: 'Source' }, { t: 'Cases', num: true }, { t: 'Share', w: '140px' }],
+            [['Driver app report', 3, 27], ['SLA breach, automatic', 4, 36], ['Assignment failure, automatic', 2, 18], ['Dispatcher raised', 2, 19]]
+              .map(([s, n, p]) => ({ cells: [s, n, p + '% ' + U.bar(p, d.PAL.lav)] }))), { pad: false })}
+        </div>
+        ${U.panel('Case log', U.table(
+          [{ t: 'Case' }, { t: 'Type' }, { t: 'Order' }, { t: 'Severity' }, { t: 'State' }, { t: 'Owner' }, { t: 'Raised' }, { t: 'Resolution' }],
+          DEEP.CASES().map(c => ({ act: 'caseOpen', arg: c.id, cells: ['<b>' + c.id + '</b>', U.esc(c.type), c.order,
+            U.tag(c.sev, DEEP.CASE_SEV[c.sev], { solid: true }),
+            U.tag(c.state, c.state === 'Resolved' ? '#1f8a4c' : c.state === 'Acknowledged' ? d.PAL.lav : d.PAL.lemon, { solid: c.state !== 'Resolved' }),
+            c.owner ? U.esc(c.owner) : '<em class="warn">Unclaimed</em>', c.created,
+            c.resolution ? U.esc(c.resolution) : '<em class="sub">—</em>'] }))), { pad: false })}`;
+
+      const settleRep = `
+        <div class="kpis k-4">
+          ${U.kpi('Receivable in range', U.money(8940.5), 'SP-2026-W35 · Ready', d.PAL.lav)}
+          ${U.kpi('Driver payable', U.money(3560), 'Per-order and salary combined', d.PAL.flax)}
+          ${U.kpi('3PL payable', U.money(1210), 'Marketplace and network supply', d.PAL.vodka)}
+          ${U.kpi('COD variance', U.money(0), 'Collected matches handed over', '#1f8a4c')}
+        </div>
+        ${U.panel('Reconciliation by period', U.table(
+          [{ t: 'Cycle' }, { t: 'Range' }, { t: 'Orders', num: true }, { t: 'Receivable', num: true }, { t: 'Driver pay', num: true },
+           { t: '3PL pay', num: true }, { t: 'COD', num: true }, { t: 'Net', num: true }, { t: 'State' }],
+          DEEP.PERIODS.map(p => ({ act: 'statement', arg: p.id, cells: ['<b>' + p.id + '</b>', p.label, p.orders,
+            U.money(p.receivable), U.money(p.driverPay), U.money(p.tplPay), U.money(p.cod),
+            '<b>' + U.money(+(p.receivable - p.driverPay - p.tplPay).toFixed(2)) + '</b>',
+            U.tag(p.state, DEEP.SETTLE_STATE[p.state], { solid: p.state !== 'Settled' })] }))), { pad: false })}
+        <div class="cols c-1-1">
+          ${U.panel('Adjustments in range', U.table([{ t: 'Order' }, { t: 'Adjustment' }, { t: 'Amount', num: true }, { t: 'Reason' }, { t: 'Actor' }],
+            d.ORDERS.flatMap(o => DEEP.settle(o).adjustments.map(a => ({ cells: ['<b>' + o.id + '</b>', U.esc(a.t),
+              '<b style="color:' + (a.a < 0 ? '#b0432a' : '#1f8a4c') + '">' + (a.a < 0 ? '−' : '+') + U.money(Math.abs(a.a)) + '</b>',
+              U.esc(a.why), U.esc(a.by)] })))), { pad: false })}
+          ${U.panel('Audit trail', `<div class="log">${DEEP.FINAUDIT.map(a =>
+            '<div class="lg"><span class="lg-t">' + a.t + '</span><span class="lg-e"><b>' + U.esc(a.a) + '</b><em>' + U.esc(a.o) + ' · ' + U.esc(a.u) + '</em></span></div>').join('')}</div>`, { pad: false })}
+        </div>`;
+
       return U.page('Reports and analytics', 'Every report filters by date, merchant, status, zone and driver',
         U.btn('Export CSV', { kind: 'primary', act: 'export', arg: 'report' }) + U.btn('Export PDF', { act: 'export', arg: 'report-pdf' }) + U.btn('Schedule', { act: 'scheduleReport' })) + `
         ${U.filters([
@@ -189,8 +261,10 @@ window.SCREENS = window.SCREENS || {};
           `<span class="f-l">Driver</span>` + U.select(['All drivers', ...d.DRIVERS.map(x => x.name)], 'All drivers', { act: 'stub' }),
           `<span class="f-sp"></span><span class="f-c">1,396 orders in range</span>`
         ])}
-        ${U.tabs(['Orders', 'Drivers', 'Delivery time', 'COD and cash', 'Zones'], tab, 'reportTab')}
-        ${tab === 'Drivers' ? drivers : tab === 'Delivery time' ? times : tab === 'COD and cash' ? cod : tab === 'Zones' ? zones : orders}
+        ${U.tabs(['Orders', 'Drivers', 'Delivery time', 'SLA performance', 'Interventions', 'Settlement', 'COD and cash', 'Zones'], tab, 'reportTab')}
+        ${tab === 'Drivers' ? drivers : tab === 'Delivery time' ? times : tab === 'SLA performance' ? slaRep :
+          tab === 'Interventions' ? rootRep : tab === 'Settlement' ? settleRep :
+          tab === 'COD and cash' ? cod : tab === 'Zones' ? zones : orders}
         ${U.panel('Scheduled reports', U.table(
           [{ t: 'Report' }, { t: 'Recipients' }, { t: 'Schedule' }, { t: 'Format' }, { t: '', w: '150px' }],
           d.REPORTS.scheduled.map(s => ({ cells: [U.esc(s.n), U.esc(s.to), s.when, s.fmt,

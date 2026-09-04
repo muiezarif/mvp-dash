@@ -11,6 +11,8 @@
     { g: 'Dash Network', pill: 'Product 06', items: [
       { r: '/network', k: 'network', t: 'Participants and control', e: '01·05·06' },
       { r: '/network-requests', k: 'network-requests', t: 'Join requests', e: '02' },
+      { r: '/contracts', k: 'contracts', t: 'Participation contracts', e: '02·10' },
+      { r: '/sla', k: 'sla', t: 'SLA and service policy', e: '16' },
       { r: '/network-monitor', k: 'network-monitor', t: 'Monitoring', e: '07' },
       { r: '/routing', k: 'routing', t: 'Routing engine', e: '09·10' }
     ]},
@@ -26,7 +28,8 @@
     ]},
     { g: 'Money', items: [
       { r: '/billing', k: 'billing', t: 'Billing and revenue', e: '10' },
-      { r: '/payouts', k: 'payouts', t: 'Payouts', e: '10' }
+      { r: '/payouts', k: 'payouts', t: 'Payouts', e: '10' },
+      { r: '/settlement', k: 'settlement', t: 'Settlement', e: '10' }
     ]},
     { g: 'Operations', items: [
       { r: '/support', k: 'support', t: 'Support — Dash Hub', e: '11' },
@@ -85,7 +88,7 @@
   const now = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
   const log = (a, o, r) => D().AUDIT.unshift({ t: now(), u: D().ME.name, r: r || D().ME.role, a, o, ip: '188.55.x.x' });
 
-  const A = {
+  const A = window.ACT = Object.assign(window.ACT || {}, {
     go: a => { location.hash = '#' + a; },
     closeDrawer: () => UI.closeDrawer(),
     stub: a => UI.toast(a || 'Not part of this prototype'),
@@ -110,38 +113,12 @@
       const v = STATE.ct.view;
       STATE.ct = { view: v, client:'All clients', ctype:'All client types', city:'Riyadh',
         district:'All districts', zone:'All zones', status:'All statuses', source:'All sources',
-        type:'All types', by:'All providers', q:'' };
+        type:'All types', by:'All providers', sla:'All SLA states', q:'' };
       render();
     },
     ctPick: id => {
-      const d = D(), o = d.order(id), dash = o.scope === 'dash';
-      const cl = d.CLIENTS.find(x => x.name === o.merchant);
       if (STATE.ct.view === 'Map') MAP.focusOrder(id);
-      UI.drawer('<b>' + id + '</b> — ' + o.status, [
-        '<div class="dw-meta">' + UI.esc(o.merchant) + ' → ' + UI.esc(o.customer) + ' · ' + UI.esc(o.product) + '</div>',
-        UI.defs([
-          ['Intervention', UI.scope(o.scope) + ' <em class="sub">' + (dash
-            ? 'Dash routed this order, so Dash owns it'
-            : 'A contract between ' + UI.esc(o.merchant) + ' and ' + UI.esc(o.provider === '—' ? 'their provider' : o.provider) + ' — Dash reads only') + '</em>'],
-          ['Status', UI.statusTag(o.status) + (o.stuck ? ' <b class="warn">' + o.stuck + ' min without movement</b>' : '')],
-          ['Source', o.source === 'Network' ? 'Dash Network' : o.source],
-          ['Fulfilled by', o.provider === '—' ? '<em class="warn">Nobody yet</em>' : UI.esc(o.provider)],
-          ['Zone', o.zone], ['Type', o.type || 'On demand'],
-          ['Elapsed', o.elapsed || '—'], ['ETA', o.eta],
-          ['Value', o.value ? UI.money(o.value) : '—'],
-          ['Cash on delivery', o.cod ? UI.money(o.cod) : 'Cash free']
-        ]),
-        dash ? '' : UI.note('Dash cannot reach into this order.',
-          'Assign, reassign and cancel do not exist here. When Dash sees a problem in a client\'s order the answer is to contact the client — raise a ticket against the order and it lands in their queue with the full history attached.', ADM.PAL.lav)
-      ].join(''), { footer: dash
-        ? UI.btn('Reassign supply', { kind:'primary', act:'reassign', arg:id }) +
-          UI.btn('Escalate', { act:'escalateOrder', arg:id }) +
-          UI.btn('Contact ' + (o.provider === '—' ? 'supply' : o.provider), { act:'stub', arg:'Message sent to ' + o.provider }) +
-          UI.btn('Cancel order', { kind:'danger', act:'cancelOrder', arg:id }) +
-          UI.btn('Full history', { act:'go', arg:'/control-tower/' + id })
-        : UI.btn('Full history', { kind:'primary', act:'go', arg:'/control-tower/' + id }) +
-          (cl ? UI.btn('Client profile', { act:'go', arg:'/clients/' + cl.id }) : '') +
-          UI.btn('Raise a ticket', { act:'ticketFor', arg:id }) });
+      window.ACT.xTrace(id);
     },
 
     /* filters */
@@ -393,8 +370,9 @@
     },
     sendAnnouncement: id => { const a = D().ANNOUNCEMENTS.find(x => x.id === id); a.state = 'Sent'; a.sent = '30 Aug 2026'; log('Sent announcement', a.t); UI.toast('Sent to ' + a.reach + ' recipients'); render(); },
     export: what => { log('Exported data', what + ' · CSV', 'Finance'); UI.toast('Exported ' + what + ' — file downloaded'); },
-    scheduleReport: () => UI.toast('Report scheduled — daily at 23:45 to ops@dash.sa')
-  };
+    scheduleReport: () => UI.toast('Report scheduled — daily at 23:45 to ops@dash.sa'),
+    reportTab: a => { STATE.rt = a; render(); }
+  });
 
   document.addEventListener('click', e => {
     const t = e.target.closest('[data-act]');
@@ -413,7 +391,7 @@
     const t = e.target.closest('[data-act]');
     if (!t) return;
     const act = t.getAttribute('data-act');
-    if (['rtSched', 'gfQ', 'cfQ'].includes(act) && A[act]) A[act](t.getAttribute('data-arg'), t);
+    if (['rtSched', 'gfQ', 'cfQ', 'ctQ'].includes(act) && A[act]) A[act](t.getAttribute('data-arg'), t);
   });
 
   window.addEventListener('hashchange', render);

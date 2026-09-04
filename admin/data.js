@@ -84,6 +84,26 @@ window.ADM = (function () {
       note:'' }
   ];
 
+  /* A merchant client's own sites. Admin reads them — the client owns them. */
+  const BR_D = ['Hittin','Al Yasmin','Olaya','Al Malqa','Al Nakheel','Al Sahafah','Qurtubah','Al Aqiq','Al Rabi','Al Wadi','Al Ghadir','Al Izdihar'];
+  const BR_M = ['Yasser Al Otaibi','Nada Al Harbi','Omar Sabri','Rana Al Zahrani','Faisal Al Amri','Huda Al Qahtani'];
+  CLIENTS.forEach((c, ci) => {
+    c.branchList = Array.from({ length: c.branches || 0 }, (_, i) => {
+      const dist = BR_D[(i + ci * 3) % BR_D.length];
+      return {
+        code: dist.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase(),
+        name: c.name + ' — ' + dist,
+        district: dist,
+        zone: ['Zone North','Zone Central','Zone East','Zone South','Zone West'][(i + ci) % 5],
+        hours: i % 3 === 2 ? '09:00 – 22:00' : '07:00 – 23:00',
+        mgr: BR_M[(i + ci) % BR_M.length],
+        orders: Math.max(3, Math.round((c.volume || 0) / (c.branches || 1)) + ((i * 5 + ci * 7) % 9) - 4),
+        onTime: 88 + ((i * 3 + ci * 5) % 10),
+        status: c.state !== 'Active' ? 'Not live yet' : (i === 3 ? 'Reduced hours' : 'Open')
+      };
+    });
+  });
+
   /* ---------- VERIFICATION QUEUE (Epic 05) ---------- */
   const VERIFY = [
     { id:'v1', client:'Barq Riyadh', type:'3PL', submitted:'27 Aug 2026', waiting:'3 days', assignee:'Khalid Al Subaie',

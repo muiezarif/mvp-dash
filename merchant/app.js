@@ -7,6 +7,7 @@
     { g: 'Operations', items: [
       { r: '/', k: 'dashboard', t: 'Dashboard', e: '05' },
       { r: '/control-tower', k: 'control-tower', t: 'Control tower', e: '09' },
+      { r: '/sla', k: 'sla', t: 'Delivery promise', e: '09' },
       { r: '/orders', k: 'orders', t: 'Orders', e: '08' },
       { r: '/create-order', k: 'create-order', t: 'Create order', e: '08' }
     ]},
@@ -29,6 +30,7 @@
     { g: 'Insight and platform', items: [
       { r: '/reports', k: 'reports', t: 'Reports', e: '13' },
       { r: '/billing', k: 'billing', t: 'Billing', e: '14' },
+      { r: '/settlement', k: 'settlement', t: 'Settlement', e: '14' },
       { r: '/notifications', k: 'notifications', t: 'Notifications', e: '17' },
       { r: '/developer', k: 'developer', t: 'Developer', e: '16' },
       { r: '/support', k: 'support', t: 'Support', e: '19' },
@@ -78,7 +80,7 @@
   }
   const now = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
-  const A = {
+  const A = window.ACT = Object.assign(window.ACT || {}, {
     go: a => { location.hash = '#' + a; },
     closeDrawer: () => UI.closeDrawer(),
     stub: a => UI.toast(a || 'Not part of this prototype'),
@@ -86,7 +88,7 @@
     /* filters */
     ofF: (a, el) => { STATE.of[a] = el.value; render(); },
     ofQ: (a, el) => { STATE.of.q = el.value; const p = el.selectionStart; render(); const i = document.querySelector('[data-act="ofQ"]'); if (i) { i.focus(); i.setSelectionRange(p, p); } },
-    ofReset: () => { STATE.of = { status: 'All statuses', branch: 'All branches', source: 'All sources', type: 'All types', provider: 'All providers', q: '' }; render(); },
+    ofReset: () => { STATE.of = { status: 'All statuses', branch: 'All branches', source: 'All sources', type: 'All types', provider: 'All providers', sla: 'All SLA states', q: '' }; render(); },
     mfF: (a, el) => { STATE.mf[a] = el.value; render(); },
     mfQ: (a, el) => { STATE.mf.q = el.value; const p = el.selectionStart; render(); const i = document.querySelector('[data-act="mfQ"]'); if (i) { i.focus(); i.setSelectionRange(p, p); } },
     reportTab: a => { STATE.rt = a; render(); },
@@ -103,30 +105,15 @@
     ctReset: () => {
       const v = STATE.ct.view;
       STATE.ct = { view: v, city:'All cities', district:'All districts', branch:'All branches',
-        status:'All statuses', provider:'All providers', type:'All types', source:'All sources' };
+        status:'All statuses', provider:'All providers', type:'All types', source:'All sources',
+        sla:'All SLA states', q:'' };
       render();
     },
+    ctQ: (a, el) => { STATE.ct.q = el.value; const p = el.selectionStart; render();
+      const i = document.querySelector('[data-act="ctQ"]'); if (i) { i.focus(); i.setSelectionRange(p, p); } },
     ctPick: id => {
-      const d = D(), o = d.order(id), b = d.branch(o.branch), c = d.customer(o.customer);
       if (STATE.ct.view === 'Map') MAP.focusOrder(id);
-      UI.drawer('<b>' + id + '</b> — ' + o.status, [
-        '<div class="dw-meta">' + UI.esc(b.name) + ' → ' + UI.esc(c.name) + ' · ' + UI.esc(o.items) + '</div>',
-        UI.defs([
-          ['Status', UI.statusTag(o.status)],
-          ['Elapsed', (o.elapsed || '0m') + (o.stuck ? ' · no update for ' + o.stuck + ' min' : '')],
-          ['ETA', o.eta + (o.late ? ' — running late' : '')],
-          ['Fulfilled by', o.provider ? UI.esc(d.prov(o.provider).name) + ' <em class="sub">' + d.prov(o.provider).kind + '</em>' : '<em class="warn">No provider yet</em>'],
-          ['Driver', o.driver ? UI.esc(o.driver) : '<em class="sub">Not named yet</em>'],
-          ['Branch', UI.esc(b.name)], ['Source', UI.esc(o.source)], ['Type', o.type],
-          ['Cash on delivery', o.cod ? UI.money(o.cod) : 'Cash free']
-        ]),
-        o.driver ? UI.note('You do not contact the driver.', 'They belong to ' + UI.esc(d.prov(o.provider).name) + '. Escalate through Dash and whoever owns fulfilment acts.', MER.PAL.vodka) : ''
-      ].join(''), { footer:
-        UI.btn('Escalate to Dash', { kind:'primary', act:'escalate', arg:id }) +
-        UI.btn('Share tracking link', { act:'sendLink', arg:id }) +
-        UI.btn('Contact support', { act:'ticketFor', arg:id }) +
-        UI.btn('Cancel order', { kind:'danger', act:'cancelOrder', arg:id }) +
-        UI.btn('Full details', { act:'go', arg:'/orders/' + id }) });
+      window.ACT.mTrace(id);
     },
     failedDecision: id => {
       UI.drawer('Failed delivery — <b>' + id + '</b>', [
@@ -159,6 +146,13 @@
     dsSpecific: (a, el) => { D().DISPATCH.specific = el.value; render(); },
     dsBehaviour: a => { D().DISPATCH.poolBehaviour = a; render(); },
     dsFallback: a => { D().DISPATCH.fallback = a; render(); },
+    dsBranchAdd: id => { const s = D().DISPATCH;
+      s.branchRules[id] = { mode: s.mode, specific: s.specific, fallback: s.fallback, fallbackAfter: s.fallbackAfter, why: '', by: 'You · today' };
+      UI.toast(D().branch(id).name + ' now carries its own rule'); render(); },
+    dsBranchReset: id => { delete D().DISPATCH.branchRules[id];
+      UI.toast(D().branch(id).name + ' follows the merchant default again'); render(); },
+    dsBranchMode: (a, el) => { const r = D().DISPATCH.branchRules[a]; if (r) { r.mode = el.value; r.by = 'You · today'; } render(); },
+    dsBranchProv: (a, el) => { const r = D().DISPATCH.branchRules[a]; if (r) r.specific = el.value; render(); },
     dsAfter: (a, el) => { D().DISPATCH.fallbackAfter = +el.value; render(); },
     dsUp: id => { const p = D().DISPATCH.poolOrder, i = p.indexOf(id); if (i > 0) { p.splice(i, 1); p.splice(i - 1, 0, id); render(); } },
     dsDown: id => { const p = D().DISPATCH.poolOrder, i = p.indexOf(id); if (i < p.length - 1) { p.splice(i, 1); p.splice(i + 1, 0, id); render(); } },
@@ -314,7 +308,7 @@
     npProvider: (a, el) => { STATE.np.provider = !STATE.np.provider; el.classList.toggle('on', STATE.np.provider); },
     npBilling: (a, el) => { STATE.np.billing = !STATE.np.billing; el.classList.toggle('on', STATE.np.billing); },
     npSystem: (a, el) => { STATE.np.system = !STATE.np.system; el.classList.toggle('on', STATE.np.system); }
-  };
+  });
 
   document.addEventListener('click', e => {
     const t = e.target.closest('[data-act]');
@@ -333,7 +327,7 @@
     const t = e.target.closest('[data-act]');
     if (!t) return;
     const act = t.getAttribute('data-act');
-    if (['dsAfter', 'ofQ', 'mfQ'].includes(act) && A[act]) A[act](t.getAttribute('data-arg'), t);
+    if (['dsAfter', 'ofQ', 'mfQ', 'ctQ'].includes(act) && A[act]) A[act](t.getAttribute('data-arg'), t);
   });
 
   window.addEventListener('hashchange', render);

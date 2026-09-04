@@ -3,7 +3,7 @@ window.SCREENS = window.SCREENS || {};
 (function () {
   const U = UI, D = () => window.DMS;
   window.STATE = window.STATE || {};
-  STATE.orderFilter = STATE.orderFilter || { status: 'All statuses', source: 'All sources', zone: 'All zones', type: 'All types', q: '' };
+  STATE.orderFilter = STATE.orderFilter || { status: 'All statuses', source: 'All sources', zone: 'All zones', type: 'All types', sla: 'All SLA states', q: '' };
 
   /* ---------------- 15 Orders ---------------- */
   SCREENS['orders'] = {
@@ -15,6 +15,7 @@ window.SCREENS = window.SCREENS || {};
         (f.source === 'All sources' || o.source === f.source) &&
         (f.type === 'All types' || o.type === f.type) &&
         (f.zone === 'All zones' || f.zone.startsWith(d.zone(o.zone).code)) &&
+        (f.sla === 'All SLA states' || DEEP.sla(o).state === f.sla) &&
         (!f.q || (o.id + ' ' + d.merchant(o.merchant).name + ' ' + d.customer(o.customer).name).toLowerCase().includes(f.q.toLowerCase())));
 
       const bySource = s => d.ORDERS.filter(o => o.source === s).length;
@@ -33,12 +34,13 @@ window.SCREENS = window.SCREENS || {};
           `<span class="f-l">Source</span>` + U.select(['All sources', 'Direct', 'Marketplace', 'Dash Network'], f.source, { act: 'ordF', arg: 'source' }),
           `<span class="f-l">Type</span>` + U.select(['All types', 'On demand', 'Scheduled'], f.type, { act: 'ordF', arg: 'type' }),
           `<span class="f-l">Zone</span>` + U.select(['All zones', ...d.ZONES.map(z => z.code)], f.zone, { act: 'ordF', arg: 'zone' }),
+          `<span class="f-l">SLA</span>` + U.select(['All SLA states', 'On time', 'At risk', 'Late'], f.sla, { act: 'ordF', arg: 'sla' }),
           `<span class="f-sp"></span><span class="f-c">${rows.length} of ${d.ORDERS.length}</span>`,
           U.btn('Reset', { act: 'ordReset' })
         ])}
         ${U.panel('', U.table(
           [{ t: 'Order' }, { t: 'Merchant' }, { t: 'Customer' }, { t: 'Zone' }, { t: 'Type' }, { t: 'Source' }, { t: 'Driver' },
-           { t: 'Status' }, { t: 'COD', num: true }, { t: 'Price', num: true }, { t: 'Created' }, { t: 'ETA' }],
+           { t: 'Status' }, { t: 'SLA' }, { t: 'COD', num: true }, { t: 'Price', num: true }, { t: 'Created' }, { t: 'ETA' }],
           rows.map(o => ({ act: 'go', arg: '/orders/' + o.id, cells: [
             `<b>${o.id}</b>`,
             U.esc(d.merchant(o.merchant).name) + `<em class="sub">${U.esc(o.branch)}</em>`,
@@ -46,7 +48,7 @@ window.SCREENS = window.SCREENS || {};
             d.zone(o.zone).code, o.type,
             U.tag(o.source, o.source === 'Dash Network' ? d.PAL.lav : o.source === 'Marketplace' ? d.PAL.vodka : d.PAL.peach),
             o.driver ? U.esc(d.driver(o.driver).name) : '<em class="warn">Unassigned</em>',
-            U.statusTag(o.status), o.cod ? U.money(o.cod) : '—', o.price ? U.money(o.price) : '—', o.created, o.eta
+            U.statusTag(o.status), DEEP.slaTag(DEEP.sla(o).state), o.cod ? U.money(o.cod) : '—', o.price ? U.money(o.price) : '—', o.created, o.eta
           ] }))), { pad: false })}`;
     }
   };
@@ -59,6 +61,7 @@ window.SCREENS = window.SCREENS || {};
       if (!o) return U.page('Order not found', 'No order with reference ' + U.esc(id));
       const m = d.merchant(o.merchant), c = d.customer(o.customer), z = d.zone(o.zone), dr = o.driver ? d.driver(o.driver) : null;
       const step = d.STATUS[o.status].step;
+      const sl = DEEP.sla(o), st = DEEP.settle(o), cs = DEEP.casesFor(o.id);
 
       return U.page(o.id, `${U.esc(m.name)} · ${U.esc(o.branch)} · created ${o.created}`,
         (o.status === 'Assigning' ? U.btn('Assign driver', { kind: 'primary', act: 'assign', arg: o.id }) : U.btn('Reassign driver', { act: 'assign', arg: o.id })) +
@@ -75,6 +78,10 @@ window.SCREENS = window.SCREENS || {};
           <div class="stack">
             ${U.panel('Order', U.defs([
               ['Status', U.statusTag(o.status)],
+              ['SLA state', DEEP.slaTag(sl.state) + ' <em class="sub">promised pickup ' + sl.promisedPickup + ' · delivery ' + sl.promisedDelivery +
+                ' · ' + sl.src + '</em>'],
+              ['Ageing', DEEP.dur(sl.age) + (sl.state === 'Late' ? ' <em class="warn">· ' + DEEP.dur(sl.over) + ' past the promise</em>' :
+                DEEP.DONE.includes(o.status) ? '' : ' <em class="sub">· ' + DEEP.dur(sl.left) + ' left</em>')],
               ['Type', o.type + (o.type === 'Scheduled' ? ' · slot ' + o.eta : '')],
               ['Source', U.tag(o.source, o.source === 'Dash Network' ? d.PAL.lav : o.source === 'Marketplace' ? d.PAL.vodka : d.PAL.peach) +
                 ' <em class="sub">' + (o.source === 'Direct' ? 'Your own merchant' : o.source === 'Marketplace' ? 'Merchant connected via your Dash listing' : 'Routed to you by Dash Network as Supply') + '</em>'],
@@ -93,10 +100,34 @@ window.SCREENS = window.SCREENS || {};
               <div class="rt"><span class="rt-d" style="background:${d.PAL.vodka}"></span>
                 <div><b>Drop-off — ${U.esc(c.addr)}</b><em>${U.esc(c.name)} · ${U.esc(c.phone)}</em></div></div>
             </div><div class="minimap" id="omap"></div>`, { pad: false })}
-            ${U.panel('History', `<div class="log">${o.log.map(l => `
-              <div class="lg"><span class="lg-t">${l.t}</span><span class="lg-e"><b>${U.esc(l.e)}</b>${l.s ? `<em>${U.esc(l.s)}</em>` : ''}</span></div>`).join('')}</div>`, { pad: false })}
+            ${U.panel('Order trace', DEEP.traceHTML(o), { pad: false,
+              right: '<span class="ph-note">Every status change, offer, intervention and manual action, in order</span>' })}
+            ${U.panel('Offer attempts and assignment history', `
+              ${(o.offers || []).length ? `<div class="offers">${o.offers.map((f, i) => `
+                <div class="of o-${f.out.toLowerCase().replace(/\s/g, '')}"><span class="of-n">${i + 1}</span>
+                  <div><b>${U.esc(d.driver(f.d).name)}</b><em>${U.esc(f.sub)}</em></div>
+                  <span class="of-o">${f.out}</span><span class="of-t">${f.t}</span></div>`).join('')}</div>`
+                : U.note('No offer has gone out yet.', 'The router found nothing eligible — dispatch diagnostics shows which check each candidate failed.', d.PAL.peach)}
+              ${(o.assigns || []).length ? U.table([{ t: 'Time' }, { t: 'From' }, { t: 'To' }, { t: 'Changed by' }, { t: 'Reason' }],
+                o.assigns.map(a => ({ cells: [a.t, U.esc(d.driver(a.from).name), U.esc(d.driver(a.to).name), U.esc(a.actor), U.esc(a.why)] }))) : ''}
+              <div class="btnrow">${U.btn('Dispatch diagnostics', { kind: 'primary', act: 'diag', arg: o.id })}${U.btn('Open the trace drawer', { act: 'trace', arg: o.id })}</div>`)}
           </div>
           <div class="stack">
+            ${U.panel('Cases raised', cs.length ? `<div class="mlist">${cs.map(c => `
+              <button type="button" class="ml ${c.state === 'Resolved' ? '' : 'warn'}" data-act="caseOpen" data-arg="${c.id}">
+                <span class="ml-h"><b>${c.id} · ${U.esc(c.type)}</b>${U.tag(c.state, c.state === 'Resolved' ? '#1f8a4c' : c.state === 'Acknowledged' ? d.PAL.lav : d.PAL.lemon, { solid: c.state !== 'Resolved' })}</span>
+                <span class="ml-s">${U.esc(c.reason)} · ${c.owner ? U.esc(c.owner) : 'unclaimed'}</span></button>`).join('')}</div>`
+              : '<div class="empty">No case has been raised on this order.</div>',
+              { pad: cs.length ? false : true, right: U.btn('Raise a case', { act: 'caseNew', arg: o.id }) })}
+            ${U.panel('Settlement', U.defs([
+              ['State', U.tag(st.state, DEEP.SETTLE_STATE[st.state], { solid: st.state !== 'Settled' })],
+              ['Rate applied', U.money(st.gross) + ' <em class="sub">' + st.base + ' base + ' + st.km + ' km</em>'],
+              ['Merchant receivable', '<b>' + U.money(st.receivable) + '</b>'],
+              ['Driver payable', st.driverPay ? U.money(st.driverPay) : '—'],
+              ['Supply payable', st.tplPay ? U.money(st.tplPay) + ' <em class="sub">' + st.supply + '</em>' : '—'],
+              ['COD', st.cod ? U.money(st.cod) + ' <em class="sub">' + st.codState + '</em>' : 'Cash free'],
+              ['Period', st.period]]) +
+              '<div class="btnrow">' + U.btn('Open the settlement record', { act: 'settleOrder', arg: o.id }) + '</div>')}
             ${U.panel('Driver', dr ? `
               <div class="who lg">${U.avatar(dr.name)}<span><b>${U.esc(dr.name)}</b><em>${U.esc(dr.phone)} · ${d.vehicle(dr.vehicle).type} ${d.vehicle(dr.vehicle).plate}</em></span></div>
               ${U.defs([['Status', U.tag(dr.status, d.PAL.lav)], ['Completion', dr.completion + '%'], ['Avg delivery', dr.avgMin + ' min'], ['Zone', d.zone(dr.zone).code]])}

@@ -203,6 +203,27 @@ window.SCREENS = window.SCREENS || {};
         U.btn('Generate key', { kind: 'primary', act: 'genKey' }) + U.btn('Open documentation', { act: 'stub', arg: 'Opens the Dash Developer Portal' })) + `
         <div class="cols c-2-1">
           <div class="stack">
+            ${U.panel('Integration health', U.table(
+              [{ t: 'Merchant' }, { t: 'Connection' }, { t: 'State' }, { t: 'Last successful sync' }, { t: 'Failed ingestions', num: true },
+               { t: 'Last error' }, { t: 'Webhook delivery' }, { t: '', w: '180px' }],
+              DEEP.CONNS.map(c => ({ cells: [
+                '<b>' + U.esc(c.n) + '</b>', c.k,
+                U.tag(c.s, c.s === 'Connected' ? '#1f8a4c' : c.s === 'Error' ? d.PAL.tang : '#c9c9c9', { solid: c.s === 'Error' }),
+                c.last, c.fails || '—',
+                c.err ? '<em class="warn">' + U.esc(c.err) + '</em>' : '<em class="sub">None</em>',
+                U.esc(c.hook),
+                '<div class="rowact">' + (c.s === 'Error'
+                  ? U.btn('Retry now', { kind: 'primary', act: 'stub', arg: 'Reprocessing ' + c.fails + ' failed ingestions for ' + c.n })
+                  : U.btn('Test', { act: 'stub', arg: 'Test call to ' + c.n + ' — 200 OK' })) + '</div>'] }))),
+              { pad: false, right: '<span class="ph-note">Plain language, not a log file — is it working, and if not, since when</span>' })}
+            ${U.panel('Failed ingestions', U.table(
+              [{ t: 'Time' }, { t: 'Merchant' }, { t: 'External order ID' }, { t: 'Reference' }, { t: 'Error' }, { t: '', w: '150px' }],
+              [['13:22', 'Almasa Foods', 'ALM-4471', 'PO-88231', '401 Unauthorized — key rotated'],
+               ['13:18', 'Almasa Foods', 'ALM-4470', 'PO-88230', '401 Unauthorized — key rotated'],
+               ['Yesterday 19:04', 'Chopped', 'CH-90233', 'CHP-2214', '422 missing customer phone']]
+                .map(([t, m, x, r, e]) => ({ cells: [t, U.esc(m), '<code>' + x + '</code>', '<code>' + r + '</code>',
+                  '<em class="warn">' + U.esc(e) + '</em>',
+                  '<div class="rowact">' + U.btn('Reprocess', { act: 'stub', arg: x + ' reprocessed' }) + '</div>'] }))), { pad: false })}
             ${U.panel('API keys', U.table(
               [{ t: 'Label' }, { t: 'Key' }, { t: 'Scope' }, { t: 'Created' }, { t: 'Last used' }, { t: '', w: '150px' }],
               [['Production — ERP', 'dsh_live_4f21••••', 'Orders, drivers, webhooks', '6 Aug 2026', '2 min ago'],

@@ -60,7 +60,8 @@ window.STATE = window.STATE || {};
      Deliberately shallower than the DMS version: the merchant watches and escalates,
      they never dispatch. No assign, no reassign, no driver contact. */
   const CT_DEF = { view:'Map', city:'All cities', district:'All districts', branch:'All branches',
-    status:'All statuses', provider:'All providers', type:'All types', source:'All sources' };
+    status:'All statuses', provider:'All providers', type:'All types', source:'All sources',
+    sla:'All SLA states', q:'' };
   STATE.ct = STATE.ct || Object.assign({}, CT_DEF);
 
   const fg = (label, control) =>
@@ -82,6 +83,12 @@ window.STATE = window.STATE || {};
       }
       if (f.type !== 'All types' && o.type !== f.type) return false;
       if (f.source !== 'All sources' && o.source !== f.source) return false;
+      if (f.sla !== 'All SLA states' && MDEEP.sla(o).state !== f.sla) return false;
+      if (f.q) {
+        const q = f.q.toLowerCase();
+        const hay = [o.id, o.ref, b.code, b.name, d.customer(o.customer).name, d.customer(o.customer).phone].join(' ').toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
       return true;
     });
   }
@@ -156,7 +163,7 @@ window.STATE = window.STATE || {};
         return '<div class="bcol"><div class="bcol-h">' + U.statusTag(st) + '<em>' + items.length + '</em></div>' +
           '<div class="bcol-b">' + (items.map(o =>
             '<button type="button" class="bcard ' + (o.late || o.stuck || o.failed || o.fellThrough ? 'warn' : '') + '" data-act="ctPick" data-arg="' + o.id + '">' +
-              '<span class="bc-h"><b>' + o.id + '</b>' + (o.prio === 'High' ? U.tag('Priority', d.PAL.tang, { solid: true }) : '') + '</span>' +
+              '<span class="bc-h"><b>' + o.id + '</b>' + MDEEP.slaTag(MDEEP.sla(o).state) + '</span>' +
               '<span class="bc-m">' + U.esc(d.branch(o.branch).code) + ' → ' + U.esc(d.customer(o.customer).name) + '</span>' +
               '<span class="bc-m">' + (o.provider ? U.esc(d.prov(o.provider).name) : '<em class="warn">No provider</em>') + '</span>' +
               '<span class="bc-f"><em>' + (o.elapsed || '0m') + ' elapsed</em><em>ETA ' + o.eta + '</em></span>' +
@@ -183,7 +190,7 @@ window.STATE = window.STATE || {};
       const waitPanel = U.panel('Awaiting a driver',
         '<div class="mlist">' + (waiting.map(o =>
           '<button type="button" class="ml ' + (o.fellThrough ? 'warn' : '') + '" data-act="ctPick" data-arg="' + o.id + '">' +
-            '<span class="ml-h"><b>' + o.id + '</b><em class="el">' + (o.elapsed || '0m') + '</em></span>' +
+            '<span class="ml-h"><b>' + o.id + '</b>' + MDEEP.slaTag(MDEEP.sla(o).state) + '<em class="el">' + (o.elapsed || '0m') + '</em></span>' +
             '<span class="ml-s">' + U.esc(d.branch(o.branch).name) + ' → ' + U.esc(d.customer(o.customer).name) + '</span>' +
             '<span class="ml-s">' + (o.fellThrough ? '<em class="warn">' + U.esc(o.fellThrough) + ' declined — fallback running</em>' : U.esc(o.source) + ' · ' + o.type) + '</span>' +
           '</button>').join('') || '<div class="empty">Every order has a driver.</div>') + '</div>' +
@@ -196,7 +203,7 @@ window.STATE = window.STATE || {};
           '<div class="dgrp">' + st + '<em>' + flight.filter(o => o.status === st).length + '</em></div>' +
           flight.filter(o => o.status === st).map(o =>
             '<button type="button" class="ml ' + (o.late || o.stuck || o.failed ? 'warn' : '') + '" data-act="ctPick" data-arg="' + o.id + '">' +
-              '<span class="ml-h"><b>' + o.id + '</b><em class="el">' + (o.elapsed || '0m') + '</em></span>' +
+              '<span class="ml-h"><b>' + o.id + '</b>' + MDEEP.slaTag(MDEEP.sla(o).state) + '<em class="el">' + (o.elapsed || '0m') + '</em></span>' +
               '<span class="ml-s">' + (o.driver ? U.esc(o.driver) : 'Driver not yet named') + ' · ' + U.esc(d.prov(o.provider).name) + '</span>' +
               '<span class="ml-s">' + U.esc(d.branch(o.branch).code) + ' · ETA ' + o.eta + '</span>' +
             '</button>').join('')).join('') || '<div class="empty">Nothing in flight.</div>') + '</div>',
@@ -228,6 +235,8 @@ window.STATE = window.STATE || {};
             d.PROVIDERS.filter(p => p.status === 'Connected').map(p => p.name)), f.provider, { act: 'ctF', arg: 'provider' })),
           fg('Type', U.select(['All types', 'On demand', 'Scheduled'], f.type, { act: 'ctF', arg: 'type' })),
           fg('Source', U.select(['All sources', 'Salla', 'Shopify', 'Kanz ERP', 'Manual entry'], f.source, { act: 'ctF', arg: 'source' })),
+          fg('SLA state', U.select(['All SLA states', 'On time', 'At risk', 'Late'], f.sla, { act: 'ctF', arg: 'sla' })),
+          fg('Find an order', U.input(f.q, 'Order ID, your reference or customer', { act: 'ctQ' })),
           '<span class="f-sp"></span><span class="f-c">' + all.length + ' in flight</span>',
           ctDirty() ? U.btn('Clear filters', { act: 'ctReset' }) : ''
         ]) +

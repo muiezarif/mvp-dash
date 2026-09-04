@@ -16,6 +16,7 @@
   const busy = () => live().length >= T().maxConcurrent;
   const current = () => active().find(o => o.status !== 'Accepted') || active()[0];
   const unread = () => S.notifRead ? 0 : FRL.NOTIFS.filter(n => n.sev !== 'low').length;
+  const issuesFor = id => FRL.ISSUES.filter(x => x.order === id);
 
   const statusColor = s => ({ 'Accepted':FRL.PAL.lemon,'To pickup':FRL.PAL.peach,'At pickup':FRL.PAL.peach,
     'Picked up':FRL.PAL.lav,'To delivery':FRL.PAL.lav,'At delivery':FRL.PAL.vodka,
@@ -128,6 +129,13 @@
         <div class="flow">${FRL.FLOW.map((s, k) => `<i class="fl ${k < i ? 'done' : ''} ${k === i ? 'now' : ''}"></i>`).join('')}</div>
         <div class="flowlab"><span>Accepted</span><b>${esc(o.status)}</b><span>Delivered</span></div>
         ${done ? `<div class="note" style="--nc:${statusColor(o.status)}"><b>${o.status}.</b> ${esc(o.log[o.log.length-1].e)} — ${esc(o.log[o.log.length-1].s || 'no note')}</div>` : ''}
+        ${issuesFor(id).map(x => `<div class="issue ${x.state === 'Resolved' ? 'closed' : 'open'}">
+          <div class="issue-h"><b>${x.state === 'Resolved' ? 'Dash resolved your issue' : 'Your issue is with Dash'}</b>
+            ${tag(x.state, x.state === 'Resolved' ? '#7BD389' : FRL.PAL.lemon, true)}</div>
+          <em>${esc(x.reason)} · reported ${esc(x.at)}</em>
+          <span>${x.state === 'Resolved' ? esc(x.reply) + ' — ' + esc(x.owner)
+            : x.owner ? esc(x.owner) + ' picked this up and is working on it' : 'Waiting for Dash to pick it up'}</span>
+          <button class="btn sm" data-a="go" data-v="issues">See my issues</button></div>`).join('')}
         ${o.instr ? `<div class="note" style="--nc:var(--tang)"><b>Special instructions.</b> ${esc(o.instr)}</div>` : ''}
 
         <div class="card">
@@ -169,10 +177,15 @@
                 <span class="slide-k">→</span><span class="slide-sh"></span>
                 <span class="slide-l">${esc(FRL.CTA[o.status] || 'Continue')}</span></button>`}
           <div class="mono" style="margin-top:8px">${inRange ? esc(o.dist) + ' — you can update.' : 'Status updates open when you reach the address.'}</div>
+          <div class="sec">Something wrong?</div>
+          <button class="btn help" data-a="sheet" data-v="issue|${o.id}">Report an issue — keep the order</button>
+          <div class="mono" style="margin-top:8px">Tell Dash what is holding you up. The order stays yours and support picks it up.</div>
+          <div class="sec">End this order</div>
           <div class="btnrow">
             <button class="btn dan" data-a="sheet" data-v="fail|${o.id}">Cannot deliver</button>
             <button class="btn dan" data-a="sheet" data-v="cancel|${o.id}">Cancel</button>
-          </div>` : ''}
+          </div>
+          <div class="mono" style="margin-top:8px">These two finish the order. Neither can be undone from the app.</div>` : ''}
       </div>
       ${tabbar()}`;
   };
@@ -324,12 +337,35 @@
     </div>
     ${tabbar()}`;
 
+  SC.issues = () => {
+    const open = FRL.ISSUES.filter(x => x.state !== 'Resolved'), closed = FRL.ISSUES.filter(x => x.state === 'Resolved');
+    const row = x => `<div class="issue ${x.state === 'Resolved' ? 'closed' : 'open'}">
+      <div class="issue-h"><b>${esc(x.id)} · ${esc(x.order)}</b>
+        ${tag(x.state, x.state === 'Resolved' ? '#7BD389' : x.state === 'Acknowledged' ? FRL.PAL.lav : FRL.PAL.lemon, true)}</div>
+      <em>${esc(x.reason)}</em>
+      <span>${esc(x.note || '—')}</span>
+      <span class="mono">Reported ${esc(x.at)}${x.owner ? ' · ' + esc(x.owner) : ' · unclaimed'}</span>
+      ${x.reply ? `<span><b>Dash:</b> ${esc(x.reply)} · ${esc(x.closed)}</span>` : ''}
+      <button class="btn sm" data-a="order" data-v="${x.order}">Open the order</button></div>`;
+    return `${sb()}
+      ${hdr('My issues', open.length ? open.length + ' still open' : 'Nothing open', { back: true })}
+      <div class="body">
+        <div class="note"><b>Reporting an issue is asking for help.</b> You have no dispatcher, so this goes straight to Dash. The order stays yours while they work on it.</div>
+        <div class="sec">Open <span class="faint">${open.length}</span></div>
+        ${open.length ? open.map(row).join('') : '<div class="empty">Nothing open right now</div>'}
+        <div class="sec">Closed <span class="faint">${closed.length}</span></div>
+        ${closed.length ? closed.map(row).join('') : '<div class="empty">Nothing closed yet</div>'}
+      </div>
+      ${tabbar()}`;
+  };
+
   SC.more = () => `${sb()}
     ${hdr('More', M().name + ' · independent')}
     <div class="body">
       ${onbar()}
       <div class="sec">Your work</div>
       ${[['history','Order history','Delivered, returned and skipped'],
+         ['issues','My issues', FRL.ISSUES.filter(x => x.state !== 'Resolved').length ? FRL.ISSUES.filter(x => x.state !== 'Resolved').length + ' open with Dash' : 'Nothing open'],
          ['profile','Profile and documents','Details, vehicle, KPIs'],
          ['wallet','Wallet and withdrawals','Balance, fare split, transactions'],
          ['notifications','Notifications', unread() ? unread() + ' unread' : 'All caught up'],
@@ -377,11 +413,20 @@
       ${o.cod ? `<div class="note" style="--nc:var(--peach)"><b>Collect ${money(o.cod)} in cash.</b> It is held against your wallet until you hand it in.</div>` : ''}
       <button class="btn pri" data-a="deliver" data-v="${id}">Complete delivery · earn ${money(o.pay)}</button>` }; },
 
+    issue: id => { const o = FRL.order(id); return { t: 'Report an issue', b: `
+      <div class="note"><b>The order stays yours.</b> This tells Dash something is wrong so support can help. It does not cancel or fail ${esc(id)}, and it does not touch your fare.</div>
+      <div class="mono" style="margin:12px 0 8px">${esc(o.status)} · ${esc(o.merchant)} · ${esc(o.dropAddr)}</div>
+      <div class="sec" style="margin-top:0">What is happening?</div>
+      <div class="pick help">${FRL.REASONS.issue.map(r =>
+        `<button data-a="doissue" data-v="${id}|${esc(r)}">${esc(r)}</button>`).join('')}</div>` }; },
+
     cancel: id => ({ t: 'Cancel order', b: `
+      <div class="note" style="--nc:var(--tang)"><b>This ends the order.</b> If you just need help, close this and report an issue instead.</div>
       <div class="mono" style="margin-bottom:12px">Pick a reason. Dash records it and the merchant is told.</div>
       <div class="pick">${FRL.REASONS.cancel.map(r => `<button data-a="docancel" data-v="${id}|${esc(r)}">${esc(r)}</button>`).join('')}</div>` }),
 
     fail: id => ({ t: 'Cannot deliver', b: `
+      <div class="note" style="--nc:var(--tang)"><b>This ends the delivery attempt.</b> Reporting an issue keeps the order alive if you are only stuck.</div>
       <div class="mono" style="margin-bottom:12px">You may try again ${T().maxReattempt} times, then it returns to the merchant and the return leg is paid.</div>
       <div class="pick">${FRL.REASONS.fail.map(r => `<button data-a="dofail" data-v="${id}|${esc(r)}">${esc(r)}</button>`).join('')}</div>` }),
 
@@ -593,6 +638,21 @@
       M().kpi.today += 1;
       closeSheet(); S.screen = 'home'; S.tab = 'orders'; S.wait = 4; render();
       toast(id + ' delivered · ' + money(o.pay) + ' available now');
+    },
+    doissue: v => {
+      const [id, r] = v.split('|'), o = FRL.order(id);
+      const idx = 'IC-' + (3141 + FRL.ISSUES.length);
+      FRL.ISSUES.unshift({ id: idx, order: id, reason: r, note: 'Reported from the freelancer app at ' + o.status.toLowerCase(),
+        at: 'Today ' + now(), state: 'Open', owner: null, reply: null, closed: null });
+      o.log.push({ t: now(), e: 'Issue reported — ' + idx, s: r + ' · order still open' });
+      closeSheet(); S.screen = 'order'; S.arg = id; render();
+      toast(idx + ' sent to Dash — ' + id + ' is still yours');
+      setTimeout(() => {
+        const x = FRL.ISSUES.find(k => k.id === idx); if (!x || x.state !== 'Open') return;
+        x.state = 'Acknowledged'; x.owner = 'Dash Support · Reem';
+        FRL.NOTIFS.unshift({ k: 'Issue picked up', t: idx + ' — Dash Support is working on it', d: 'just now', sev: 'high', link: 'issues' });
+        S.notifRead = false; render(); toast('Dash Support picked up ' + idx);
+      }, 3200);
     },
     docancel: v => {
       const [id, r] = v.split('|'), o = FRL.order(id);

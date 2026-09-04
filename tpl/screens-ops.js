@@ -150,6 +150,11 @@ window.SCREENS = window.SCREENS || {};
           <div class="stack">
             ${U.panel('Order', U.defs([
               ['Status', U.statusTag(o.status)],
+              ['SLA state', TDEEP.slaTag(TDEEP.sla(o).state) + ' <em class="sub">pickup by ' + TDEEP.sla(o).promisedPickup +
+                ' · delivery by ' + TDEEP.sla(o).promisedDelivery + ' · ' + TDEEP.sla(o).src + '</em>'],
+              ['Ageing', TDEEP.dur(TDEEP.sla(o).age) + (TDEEP.sla(o).state === 'Late'
+                ? ' <em class="warn">· ' + TDEEP.dur(TDEEP.sla(o).over) + ' past the promise</em>'
+                : TDEEP.DONE.includes(o.status) ? '' : ' <em class="sub">· ' + TDEEP.dur(TDEEP.sla(o).left) + ' left</em>')],
               ['Dash id', `<code>${o.id}</code>`],
               ['Your reference', o.ref === '—' ? '<em class="sub">Not pulled into your system</em>' : `<code>${U.esc(o.ref)}</code>`],
               ['Source', srcPill(o.source) + ' <em class="sub">' + (o.source === 'Marketplace' ? 'Your own merchant — priced by your contract' : o.source === 'Network' ? 'Routed to you as Supply — priced by Dash' : 'The merchant asked for you by name') + '</em>'],
@@ -168,8 +173,22 @@ window.SCREENS = window.SCREENS || {};
               <div class="rt"><span class="rt-d" style="background:${d.PAL.vodka}"></span>
                 <div><b>Drop-off — ${U.esc(o.addr)}</b><em>${U.esc(c.name)} · ${U.esc(c.phone)}</em></div></div>
             </div><div class="minimap"><div class="lf" id="omap2"></div></div>`, { pad: false })}
-            ${U.panel('History', `<div class="log">${o.log.map(l =>
-              `<div class="lg"><span class="lg-t">${l.t}</span><span class="lg-e"><b>${U.esc(l.e)}</b>${l.s ? `<em>${U.esc(l.s)}</em>` : ''}</span></div>`).join('')}</div>`, { pad: false })}
+            ${U.panel('Order trace', TDEEP.traceHTML(o), { pad: false,
+              right: U.btn('Open the trace drawer', { act: 'tTrace', arg: o.id }) })}
+            ${U.panel('Offer attempts', TDEEP.offersFor(o.id).length ? `<div class="offers">${TDEEP.offersFor(o.id).map((f, i) => `
+              <div class="of o-${f.out.toLowerCase().replace(/\s/g, '')}"><span class="of-n">${i + 1}</span>
+                <div><b>${U.esc(f.who)}</b><em>${U.esc(f.sub)}</em></div>
+                <span class="of-o">${f.out}</span><span class="of-t">${f.t}</span></div>`).join('')}</div>
+              <div class="ro-foot">Dash shows you the offer chain on any order you were in line for — including the ones that went elsewhere. Which of another provider’s drivers refused it is theirs, not yours.</div>`
+              : U.note('No offer chain on this order.', 'A Direct order comes straight to you by name — Dash never shopped it around.', d.PAL.peach), { pad: false })}
+            ${U.panel('Settlement', U.defs([
+              ['State', U.tag(TDEEP.settle(o).state, TDEEP.SETTLE_STATE[TDEEP.settle(o).state], { solid: TDEEP.settle(o).state !== 'Settled' })],
+              ['Priced by', U.esc(TDEEP.settle(o).priced)],
+              ['Rate applied', U.money(TDEEP.settle(o).gross)],
+              ['Dash commission', TDEEP.settle(o).commission ? '−' + U.money(TDEEP.settle(o).commission) : 'None'],
+              ['Payable to you', '<b>' + U.money(TDEEP.settle(o).payable) + '</b>'],
+              ['Period', TDEEP.settle(o).period]]) +
+              '<div class="btnrow">' + U.btn('Open the settlement record', { act: 'tSettle', arg: o.id }) + '</div>')}
           </div>
           <div class="stack">
             ${U.panel('Your driver', dr ? `
@@ -199,7 +218,8 @@ window.SCREENS = window.SCREENS || {};
      assignment and cancellation all happen in the 3PL's own system and reach Dash
      through the API. The only action is opening an order's full detail. */
   const CT_DEF = { view:'List', city:'All cities', district:'All districts',
-    status:'All statuses', merchant:'All merchants', source:'All sources', type:'All types' };
+    status:'All statuses', merchant:'All merchants', source:'All sources', type:'All types',
+    sla:'All SLA states', q:'' };
   STATE.ct = STATE.ct || Object.assign({}, CT_DEF);
 
   const fg = (label, control) =>
@@ -217,6 +237,12 @@ window.SCREENS = window.SCREENS || {};
       if (f.merchant !== 'All merchants' && d.merchant(o.merchant).name !== f.merchant) return false;
       if (f.source !== 'All sources' && d.SOURCES[o.source] !== f.source) return false;
       if (f.type !== 'All types' && o.type !== f.type) return false;
+      if (f.sla !== 'All SLA states' && TDEEP.sla(o).state !== f.sla) return false;
+      if (f.q) {
+        const q = f.q.toLowerCase();
+        const hay = [o.id, o.ref, o.zone, d.merchant(o.merchant).name, d.customer(o.customer).name, d.customer(o.customer).phone].join(' ').toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
       return true;
     });
   }
@@ -267,8 +293,8 @@ window.SCREENS = window.SCREENS || {};
         return '<div class="bcol"><div class="bcol-h">' + U.statusTag(st) + '<em>' + items.length + '</em></div>' +
           '<div class="bcol-b">' + (items.map(o =>
             '<button type="button" class="bcard ' + (o.late || o.stuck || o.noResponse ? 'warn' : '') + '" data-act="ctPick" data-arg="' + o.id + '">' +
-              '<span class="bc-h"><b>' + o.id + '</b>' + U.tag(d.SOURCES[o.source], srcColor(o.source)) + '</span>' +
-              '<span class="bc-m">' + U.esc(d.merchant(o.merchant).name) + ' · ' + o.zone + '</span>' +
+              '<span class="bc-h"><b>' + o.id + '</b>' + TDEEP.slaTag(TDEEP.sla(o).state) + '</span>' +
+              '<span class="bc-m">' + U.esc(d.merchant(o.merchant).name) + ' · ' + o.zone + ' · ' + U.tag(d.SOURCES[o.source], srcColor(o.source)) + '</span>' +
               '<span class="bc-m">' + (o.driver ? U.esc(d.driver(o.driver).name) : '<em class="sub">Not accepted yet</em>') + '</span>' +
               '<span class="bc-f"><em>' + (o.elapsed || '0m') + ' elapsed</em><em>ETA ' + o.eta + '</em></span>' +
             '</button>').join('') || '<div class="bcol-e">—</div>') + '</div></div>';
@@ -298,7 +324,7 @@ window.SCREENS = window.SCREENS || {};
           '<div class="dgrp">' + st + '<em>' + flight.filter(o => o.status === st).length + '</em></div>' +
           flight.filter(o => o.status === st).map(o =>
             '<button type="button" class="ml ' + (o.late || o.stuck ? 'warn' : '') + '" data-act="ctPick" data-arg="' + o.id + '">' +
-              '<span class="ml-h"><b>' + o.id + '</b><em class="el">' + (o.elapsed || '0m') + '</em></span>' +
+              '<span class="ml-h"><b>' + o.id + '</b>' + TDEEP.slaTag(TDEEP.sla(o).state) + '<em class="el">' + (o.elapsed || '0m') + '</em></span>' +
               '<span class="ml-s">' + U.esc(d.driver(o.driver).name) + ' · ' + U.esc(d.merchant(o.merchant).name) + '</span>' +
               '<span class="ml-s">' + U.tag(d.SOURCES[o.source], srcColor(o.source)) + ' ' + o.zone + ' · ETA ' + o.eta + '</span>' +
             '</button>').join('')).join('') || '<div class="empty">Nothing in flight.</div>') + '</div>',
@@ -327,6 +353,8 @@ window.SCREENS = window.SCREENS || {};
           fg('Status', U.select(['All statuses', 'Received', 'Accepted', 'Picked up', 'In transit'], f.status, { act: 'ctF', arg: 'status' })),
           fg('Merchant', U.select(['All merchants'].concat(d.MERCHANTS.map(m => m.name)), f.merchant, { act: 'ctF', arg: 'merchant' })),
           fg('Type', U.select(['All types', 'On demand', 'Scheduled'], f.type, { act: 'ctF', arg: 'type' })),
+          fg('SLA state', U.select(['All SLA states', 'On time', 'At risk', 'Late'], f.sla, { act: 'ctF', arg: 'sla' })),
+          fg('Find an order', U.input(f.q, 'Dash ID, your reference or customer', { act: 'ctQ' })),
           '<span class="f-sp"></span><span class="f-c">' + all.length + ' active</span>',
           ctDirty() ? U.btn('Clear filters', { act: 'ctReset' }) : ''
         ]) +

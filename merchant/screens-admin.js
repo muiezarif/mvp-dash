@@ -161,6 +161,77 @@ window.SCREENS = window.SCREENS || {};
             o.status === 'Delivered' ? U.tag('Settled', '#1f8a4c') : o.status === 'Returned' ? U.tag('Not collected', d.PAL.tang, { solid: true }) : U.tag('On the road', d.PAL.lemon, { solid: true })] }))), { pad: false })}
         ${U.note('Dash does not hold your cash.', 'The driver collects it and their provider settles with you directly. Dash records the amount so both sides can reconcile.', d.PAL.peach)}`;
 
+      const slaRep = `
+        <div class="kpis k-4">
+          ${U.kpi('Promise met', '95.9%', '1,339 of 1,396 orders', '#1f8a4c')}
+          ${U.kpi('Promise missed', '57', '4.1% of orders in range', d.PAL.tang)}
+          ${U.kpi('Average miss', '14 min', 'Past the promised delivery time', d.PAL.peach)}
+          ${U.kpi('Credited back to you', U.money(26.4), 'Automatic credits for missed promises', d.PAL.lav)}
+        </div>
+        <div class="cols c-1-1">
+          ${U.panel('On time by branch', U.table([{ t: 'Branch' }, { t: 'Promise' }, { t: 'Orders', num: true }, { t: 'On time', w: '140px' }, { t: 'Missed', num: true }],
+            d.BRANCHES.map(b => ({ cells: [U.esc(b.name), b.code === 'KZ-03' ? '60 min · exception' : '45 min', b.orders * 7,
+              b.onTime + '% ' + U.bar(b.onTime, b.onTime >= 95 ? '#1f8a4c' : d.PAL.peach),
+              Math.round(b.orders * 7 * (100 - b.onTime) / 100)] }))), { pad: false })}
+          ${U.panel('Why the promise was missed', `<div class="blist">${[['Provider took too long to assign', 44],
+            ['Your branch was not ready', 26], ['Traffic and distance', 18], ['Failed first attempt', 12]]
+            .map(([k, v]) => '<div class="bl"><span>' + k + '</span>' + U.bar(v, d.PAL.tang) + '<b>' + v + '%</b></div>').join('')}</div>
+            <div class="legend">Two of these four are yours to fix, and both sit inside your branches.</div>`, { pad: false })}
+        </div>
+        ${U.panel('Orders that missed the promise', U.table(
+          [{ t: 'Order' }, { t: 'Branch' }, { t: 'Fulfilled by' }, { t: 'Promised' }, { t: 'Missed by' }, { t: 'Credit', num: true }],
+          d.ORDERS.filter(o => MDEEP.sla(o).state === 'Late').map(o => { const s = MDEEP.sla(o), st = MDEEP.settle(o);
+            return { act: 'mTrace', arg: o.id, cells: ['<b>' + o.id + '</b>', d.branch(o.branch).code,
+              o.provider ? U.esc(d.prov(o.provider).name) : '<em class="warn">Waiting</em>',
+              s.promisedDelivery, '<b style="color:#b0432a">' + MDEEP.dur(Math.max(1, s.over)) + '</b>',
+              st.adj < 0 ? '<b style="color:#1f8a4c">−' + U.money(Math.abs(st.adj)) + '</b>' : '—'] }; })), { pad: false,
+          right: '<span class="ph-note">Read against the promise on your delivery account</span>' })}`;
+
+      const rootRep = `
+        <div class="kpis k-4">
+          ${U.kpi('Failed deliveries', '46', '3.3% of orders in range', d.PAL.tang)}
+          ${U.kpi('Returned to you', '28', 'Not charged for delivery', d.PAL.peach)}
+          ${U.kpi('Escalations you raised', '14', '11 resolved by Dash', d.PAL.lav)}
+          ${U.kpi('Caused inside your branches', '38%', 'Not ready, wrong details, no stock', d.PAL.flax)}
+        </div>
+        <div class="cols c-1-1">
+          ${U.panel('Root cause of failures', `<div class="blist">${[['Customer unavailable', 34], ['Your branch not ready', 26],
+            ['Wrong or changed address', 18], ['No provider available', 12], ['Vehicle problem', 6], ['Item issue', 4]]
+            .map(([k, v]) => '<div class="bl"><span>' + k + '</span>' + U.bar(v, d.PAL.vodka) + '<b>' + v + '%</b></div>').join('')}</div>`, { pad: false })}
+          ${U.panel('Escalations and how they closed', U.table([{ t: 'Order' }, { t: 'Reason' }, { t: 'State' }, { t: 'How Dash closed it' }],
+            Object.keys(MDEEP.ESCALATIONS).flatMap(id => MDEEP.ESCALATIONS[id].map(e => ({ act: 'mTrace', arg: id, cells: [
+              '<b>' + id + '</b>', U.esc(e.reason),
+              U.tag(e.state, e.state === 'Resolved' ? '#1f8a4c' : d.PAL.lav, { solid: e.state !== 'Resolved' }),
+              U.esc(e.reply || '—')] })))), { pad: false })}
+        </div>
+        ${U.panel('Failures by branch', U.table([{ t: 'Branch' }, { t: 'Failed', num: true }, { t: 'Returned', num: true },
+          { t: 'Caused by the branch', num: true }, { t: 'Most common cause' }],
+          d.BRANCHES.map((b, i) => ({ cells: [U.esc(b.name), 14 - i * 2, 9 - i, [6, 4, 3, 1][i] || 1,
+            ['Order not ready when the driver arrived', 'Customer unavailable', 'Wrong address on the order', 'Customer unavailable'][i] || 'Customer unavailable'] }))), { pad: false })}`;
+
+      const settleRep = `
+        <div class="kpis k-4">
+          ${U.kpi('Charges in range', U.money(2814), '148 delivered orders', d.PAL.lav)}
+          ${U.kpi('Credits', U.money(-26.4), 'Missed promises, automatic', '#1f8a4c')}
+          ${U.kpi('COD credited', U.money(940), 'Netted off your statement', d.PAL.peach)}
+          ${U.kpi('Amount due', U.money(2787.6), 'SP-2026-W35 · due 7 Sep', d.PAL.flax)}
+        </div>
+        ${U.panel('Reconciliation by statement period', U.table(
+          [{ t: 'Cycle' }, { t: 'Range' }, { t: 'Orders', num: true }, { t: 'Charges', num: true }, { t: 'Credits', num: true },
+           { t: 'COD credited', num: true }, { t: 'Due', num: true }, { t: 'State' }],
+          MDEEP.PERIODS.map(p => ({ act: 'mStatement', arg: p.id, cells: ['<b>' + p.id + '</b>', p.label, p.orders,
+            U.money(p.charges), '<b style="color:#1f8a4c">' + U.money(p.credits) + '</b>', U.money(p.cod),
+            '<b>' + U.money(+(p.charges + p.credits).toFixed(2)) + '</b>',
+            U.tag(p.state, MDEEP.SETTLE_STATE[p.state], { solid: p.state !== 'Settled' })] }))), { pad: false })}
+        ${U.panel('Spend by provider against what you were promised', U.table(
+          [{ t: 'Provider' }, { t: 'Orders', num: true }, { t: 'Charges', num: true }, { t: 'Per order', num: true }, { t: 'On time', w: '130px' }, { t: 'Credits owed to you', num: true }],
+          d.PROVIDERS.filter(p => p.status === 'Connected').map(p => { const n = { p0: 412, p1: 786, p2: 198 }[p.id], c = n * 15.6;
+            return { cells: ['<b>' + U.esc(p.name) + '</b>', n, U.money(c), U.money(c / n),
+              p.onTime + '% ' + U.bar(p.onTime, p.onTime >= 93 ? d.PAL.vodka : d.PAL.tang),
+              '<b style="color:#1f8a4c">−' + U.money(Math.round((100 - p.onTime) * n * .0044 * 100) / 100) + '</b>'] }; })), { pad: false,
+          right: '<span class="ph-note">A provider that misses more costs you less — and delivers worse</span>' })}
+        ${U.note('These are the same numbers your provider sees.', 'Dash holds one record per order. Your statement and their payable are two views of it, so a disagreement is about the record, not about whose spreadsheet is right.', d.PAL.vodka)}`;
+
       return U.page('Reports and analytics', 'Filter by date, branch, provider and status — then export or schedule it',
         U.btn('Export CSV', { kind: 'primary', act: 'export', arg: 'report' }) + U.btn('Export PDF', { act: 'export', arg: 'report-pdf' }) +
         U.btn('Schedule by email', { act: 'scheduleReport' })) + `
@@ -171,8 +242,10 @@ window.SCREENS = window.SCREENS || {};
           `<span class="f-l">Status</span>` + U.select(['All statuses', ...Object.keys(d.STATUS)], 'All statuses', { act: 'stub' }),
           `<span class="f-sp"></span><span class="f-c">1,396 orders in range</span>`
         ])}
-        ${U.tabs(['Orders', 'Delivery performance', 'Spending', 'Cash on delivery'], tab, 'reportTab')}
-        ${tab === 'Delivery performance' ? perf : tab === 'Spending' ? spend : tab === 'Cash on delivery' ? cod : orders}
+        ${U.tabs(['Orders', 'Delivery performance', 'SLA performance', 'Failures and root cause', 'Settlement', 'Spending', 'Cash on delivery'], tab, 'reportTab')}
+        ${tab === 'Delivery performance' ? perf : tab === 'SLA performance' ? slaRep :
+          tab === 'Failures and root cause' ? rootRep : tab === 'Settlement' ? settleRep :
+          tab === 'Spending' ? spend : tab === 'Cash on delivery' ? cod : orders}
         ${U.panel('Scheduled reports', U.table(
           [{ t: 'Report' }, { t: 'Recipients' }, { t: 'Schedule' }, { t: 'Format' }, { t: '', w: '150px' }],
           d.REPORTS.scheduled.map(s => ({ cells: [U.esc(s.n), U.esc(s.to), U.esc(s.when), s.fmt,

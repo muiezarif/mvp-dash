@@ -14,6 +14,8 @@
   const upcoming = () => DRV.ORDERS.filter(o => o.tag === 'Scheduled' && !['Delivered','Cancelled','Returned'].includes(o.status));
   const current = () => active().find(o => o.status !== 'Accepted') || active()[0];
   const unread = () => S.notifRead ? 0 : DRV.NOTIFS.filter(n => n.sev !== 'low').length;
+  const issuesFor = id => DRV.ISSUES.filter(x => x.order === id);
+  const openIssues = () => DRV.ISSUES.filter(x => x.state !== 'Resolved');
 
   const statusColor = s => ({ 'Accepted':DRV.PAL.lemon,'To pickup':DRV.PAL.peach,'At pickup':DRV.PAL.peach,
     'Picked up':DRV.PAL.lav,'To delivery':DRV.PAL.lav,'At delivery':DRV.PAL.vodka,
@@ -116,6 +118,13 @@ SC.order = id => {
         <div class="flowlab"><span>Accepted</span><b>${esc(o.status)}</b><span>Delivered</span></div>
 
         ${done ? `<div class="note" style="--nc:${statusColor(o.status)}"><b>${o.status}.</b> ${esc(o.log[o.log.length-1].e)} — ${esc(o.log[o.log.length-1].s || 'no note')}</div>` : ''}
+        ${issuesFor(id).map(x => `<div class="issue ${x.state === 'Resolved' ? 'closed' : 'open'}">
+          <div class="issue-h"><b>${x.state === 'Resolved' ? 'Your issue was resolved' : 'Your issue is with the office'}</b>
+            ${tag(x.state, x.state === 'Resolved' ? '#7BD389' : DRV.PAL.lemon, true)}</div>
+          <em>${esc(x.reason)} · reported ${esc(x.at)}</em>
+          <span>${x.state === 'Resolved' ? esc(x.reply) + ' — ' + esc(x.owner)
+            : x.owner ? esc(x.owner) + ' picked this up and is working on it' : 'Waiting for a dispatcher to pick it up'}</span>
+          <button class="btn sm" data-a="go" data-v="issues">See my issues</button></div>`).join('')}
         ${o.instr ? `<div class="note" style="--nc:var(--tang)"><b>Special instructions.</b> ${esc(o.instr)}</div>` : ''}
 
         <div class="card">
@@ -153,10 +162,37 @@ SC.order = id => {
           <div class="mono" style="margin-top:8px">${inRange
             ? `Within ${P().distance} m — you can update. ${esc(o.dist)}.`
             : `Your office allows status updates within ${P().distance} m of the address.`}</div>
+        <div class="sec">Something wrong?</div>
+          <button class="btn help" data-a="sheet" data-v="issue|${o.id}">Report an issue — keep the order</button>
+          <div class="mono" style="margin-top:8px">Tell the office what is holding you up. The order stays yours and a dispatcher picks it up.</div>
+          <div class="sec">End this order</div>
           <div class="btnrow">
             <button class="btn dan" data-a="sheet" data-v="fail|${o.id}">Cannot deliver</button>
             <button class="btn dan" data-a="sheet" data-v="cancel|${o.id}">Cancel order</button>
-          </div>` : ''}
+          </div>
+          <div class="mono" style="margin-top:8px">These two finish the order. Neither can be undone from the app.</div>` : ''}
+      </div>
+      ${tabbar()}`;
+  };
+
+  SC.issues = () => {
+    const open = openIssues(), closed = DRV.ISSUES.filter(x => x.state === 'Resolved');
+    const row = x => `<div class="issue ${x.state === 'Resolved' ? 'closed' : 'open'}">
+      <div class="issue-h"><b>${esc(x.id)} · ${esc(x.order)}</b>
+        ${tag(x.state, x.state === 'Resolved' ? '#7BD389' : x.state === 'Acknowledged' ? DRV.PAL.lav : DRV.PAL.lemon, true)}</div>
+      <em>${esc(x.reason)}</em>
+      <span>${esc(x.note || '—')}</span>
+      <span class="mono">Reported ${esc(x.at)}${x.owner ? ' · ' + esc(x.owner) : ' · unclaimed'}</span>
+      ${x.reply ? `<span><b>Office:</b> ${esc(x.reply)} · ${esc(x.closed)}</span>` : ''}
+      <button class="btn sm" data-a="order" data-v="${x.order}">Open the order</button></div>`;
+    return `${sb()}
+      ${hdr('My issues', open.length ? open.length + ' still open' : 'Nothing open', { back: true })}
+      <div class="body">
+        <div class="note"><b>Reporting an issue is asking for help.</b> The order stays yours while the office works on it. You will see the answer here.</div>
+        <div class="sec">Open <span class="faint">${open.length}</span></div>
+        ${open.length ? open.map(row).join('') : '<div class="empty">Nothing open right now</div>'}
+        <div class="sec">Closed <span class="faint">${closed.length}</span></div>
+        ${closed.length ? closed.map(row).join('') : '<div class="empty">Nothing closed yet</div>'}
       </div>
       ${tabbar()}`;
   };
@@ -313,6 +349,7 @@ SC.order = id => {
       ${[['history','Order history','Everything you have delivered'],
          ['profile','Profile and documents','Personal info, vehicle, KPIs'],
          ['wallet','Wallet','Balance, contract, transactions'],
+         ['issues','My issues', openIssues().length ? openIssues().length + ' open with the office' : 'Nothing open'],
          ['notifications','Notifications', unread() ? unread() + ' unread' : 'All caught up'],
          ['chat','Dispatcher chat','Mishal · Rehla Fleet']].map(([k, t, s]) =>
         `<button class="oc" data-a="go" data-v="${k}"><div class="oc-h"><b>${t}</b><span class="mono">→</span></div>
@@ -358,12 +395,21 @@ SC.order = id => {
       <button class="btn pri" data-a="deliver" data-v="${id}">Complete delivery</button>
       <div class="mono" style="margin-top:8px;text-align:center">${esc(o.dist)} · within ${P().distance} m</div>` }; },
 
+    issue: id => { const o = DRV.order(id); return { t: 'Report an issue', b: `
+      <div class="note"><b>The order stays yours.</b> This tells the office something is wrong so a dispatcher can help. It does not cancel or fail ${esc(id)}.</div>
+      <div class="mono" style="margin:12px 0 8px">${esc(o.status)} · ${esc(o.merchant)} · ${esc(o.dropAddr)}</div>
+      <div class="sec" style="margin-top:0">What is happening?</div>
+      <div class="pick help">${DRV.REASONS.issue.map(r =>
+        `<button data-a="doissue" data-v="${id}|${esc(r)}">${esc(r)}</button>`).join('')}</div>` }; },
+
     cancel: id => ({ t: 'Cancel order', b: `
+      <div class="note" style="--nc:var(--tang)"><b>This ends the order.</b> If you just need help, close this and report an issue instead.</div>
       <div class="mono" style="margin-bottom:12px">Your office requires a reason. It goes on the order and your dispatcher is notified.</div>
       <div class="pick">${DRV.REASONS.cancel.map(r =>
         `<button data-a="docancel" data-v="${id}|${esc(r)}">${esc(r)}</button>`).join('')}</div>` }),
 
     fail: id => ({ t: 'Cannot deliver', b: `
+      <div class="note" style="--nc:var(--tang)"><b>This ends the delivery attempt.</b> Reporting an issue keeps the order alive if you are only stuck.</div>
       <div class="mono" style="margin-bottom:12px">Pick what happened. ${P().reattempt
         ? 'You may try again ' + P().maxReattempt + ' times' + (P().autoReturn ? ', then it returns to the merchant.' : '.')
         : 'The order returns to the merchant.'}</div>
@@ -485,6 +531,21 @@ SC.order = id => {
       M().kpi.today += 1;
       closeSheet(); S.screen = 'home'; S.tab = 'orders'; render();
       toast(id + ' delivered · ' + money(o.pay) + ' added to your wallet');
+    },
+    doissue: v => {
+      const [id, r] = v.split('|'), o = DRV.order(id);
+      const idx = 'IC-' + (3141 + DRV.ISSUES.length);
+      DRV.ISSUES.unshift({ id: idx, order: id, reason: r, note: 'Reported from the driver app at ' + o.status.toLowerCase(),
+        at: 'Today ' + now(), state: 'Open', owner: null, reply: null, closed: null });
+      o.log.push({ t: now(), e: 'Issue reported — ' + idx, s: r + ' · order still open' });
+      closeSheet(); S.screen = 'order'; S.arg = id; render();
+      toast(idx + ' sent to the office — ' + id + ' is still yours');
+      setTimeout(() => {
+        const x = DRV.ISSUES.find(k => k.id === idx); if (!x || x.state !== 'Open') return;
+        x.state = 'Acknowledged'; x.owner = 'Mishal · Dispatcher';
+        DRV.NOTIFS.unshift({ k: 'Issue picked up', t: idx + ' — Mishal is working on it', d: 'just now', sev: 'high', link: 'issues' });
+        S.notifRead = false; render(); toast('Mishal picked up ' + idx);
+      }, 3200);
     },
     docancel: v => {
       const [id, r] = v.split('|'), o = DRV.order(id);
