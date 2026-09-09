@@ -41,7 +41,7 @@
   function sidebar(route) {
     const unread = D().NOTIFS.filter(n => n.sev !== 'low').length;
     return `
-      <a class="brand" href="#/"><span class="brand-w">DASH</span><span class="brand-d"></span><span class="brand-p">MERCHANT</span></a>
+      <a class="brand" href="#/"><img class="brand-w" src="assets/dash-logo-white.png" alt="Dash" width="606" height="242"><span class="brand-d"></span><span class="brand-p">MERCHANT</span></a>
       <div class="acct-chip">
         <div><b>${D().BIZ.name}</b><em>4 branches · ${D().BIZ.plan}</em></div>
         <span class="ver">Verified</span>

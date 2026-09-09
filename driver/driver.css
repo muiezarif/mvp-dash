@@ -251,7 +251,7 @@ a{color:var(--lemon);text-decoration:none}
 .login .foot{margin-bottom:auto}
 .login::-webkit-scrollbar{display:none}
 .login .lw{display:flex;align-items:baseline;gap:8px;margin-bottom:26px}
-.login .lw b{font:400 44px/1 var(--disp);letter-spacing:.05em}
+.login .lw img{height:42px;width:auto;display:block}
 .login .lw i{width:8px;height:8px;background:var(--lemon);display:block}
 .login h2{font:400 34px/.92 var(--disp);letter-spacing:.02em;margin:0 0 10px}
 .login p{font-size:13px;color:var(--dim);margin:0 0 22px}

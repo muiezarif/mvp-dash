@@ -22,7 +22,7 @@ em.warn{font-style:normal;color:#b0432a;font-weight:600}
 #side{background:#0B0B0B;color:#fff;display:flex;flex-direction:column;overflow-y:auto;border-right:1px solid #000}
 .brand{display:flex;align-items:baseline;gap:7px;padding:16px 16px 12px;color:#fff}
 .brand:hover{text-decoration:none}
-.brand-w{font:400 27px/1 var(--disp);letter-spacing:.06em}
+.brand-w{height:26px;width:auto;display:block}
 .brand-d{width:6px;height:6px;background:var(--lemon);display:block}
 .brand-p{font:500 10px var(--mono);letter-spacing:.2em;color:#8a8a8a;margin-left:2px}
 .acct-chip{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 12px 12px;padding:9px 10px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}

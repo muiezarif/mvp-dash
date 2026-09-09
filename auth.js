@@ -12,7 +12,7 @@
 
   function left() {
     return '<div class="auth-l">' +
-      '<div class="auth-brand">DASH<i></i><em>' + C.product + '</em></div>' +
+      '<div class="auth-brand"><img src="assets/dash-logo-white.png" alt="Dash" width="606" height="242"><i></i><em>' + C.product + '</em></div>' +
       '<h1 class="auth-h">' + C.head + '</h1>' +
       '<p class="auth-sub">' + C.sub + '</p>' +
       '<div class="auth-facts">' + C.facts.map(f =>

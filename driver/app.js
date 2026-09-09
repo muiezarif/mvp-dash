@@ -70,7 +70,7 @@
 
   SC.login = () => `${sb()}
     <div class="login">
-      <div class="lw"><b>DASH</b><i></i></div>
+      <div class="lw"><img src="assets/dash-logo-white.png" alt="Dash" width="606" height="242"><i></i></div>
       <h2>Driver app</h2>
       <p>Rehla Fleet gave you these credentials. There is no signup here — your dispatcher creates the account.</p>
       <label class="fld"><span>Mobile number or National ID</span><input value="+966 50 118 4402"></label>

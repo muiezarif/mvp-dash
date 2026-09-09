@@ -47,7 +47,7 @@
   function sidebar(route) {
     const unread = D().NOTIFS.filter(n => n.sev === 'high').length;
     return `
-      <a class="brand" href="#/"><span class="brand-w">DASH</span><span class="brand-d"></span><span class="brand-p">ADMIN</span></a>
+      <a class="brand" href="#/"><img class="brand-w" src="assets/dash-logo-white.png" alt="Dash" width="606" height="242"><span class="brand-d"></span><span class="brand-p">ADMIN</span></a>
       <div class="internal"><i></i><span>Internal · staff only</span></div>
       <div class="acct-chip">
         <div><b>Dash Platform</b><em>195 clients · 3 products</em></div>
