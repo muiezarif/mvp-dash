@@ -284,6 +284,40 @@
         { footer: UI.btn('Save', { kind: 'primary', act: 'closeDrawer' }) + UI.btn('Sync now', { act: 'stub', arg: 'Sync triggered' }) });
     },
 
+    /* branch access */
+    brAccessRemove: arg => {
+      const [bid, em] = arg.split('|'), m = D().TEAM.find(x => x.e === em);
+      if (!m || m.sc === 'all') return;
+      if (m.sc.length === 1) return UI.toast(m.n + ' only covers this branch — change their role or remove them in Roles and permissions');
+      m.sc = m.sc.filter(x => x !== bid); UI.toast(m.n + ' no longer has access to ' + D().branch(bid).name); render();
+    },
+    brAccessAdd: bid => {
+      const b = D().branch(bid);
+      const others = D().TEAM.filter(m => m.sc !== 'all' && !m.sc.includes(bid));
+      UI.drawer('Give access — <b>' + UI.esc(b.name) + '</b>', `
+        ${UI.field('Existing teammate', UI.select(['Invite someone new', ...others.map(m => m.n + ' · ' + m.r)], 'Invite someone new', { act: 'brAccessPick' }), 'Adds this branch to their scope. Their role stays the same.')}
+        ${UI.field('Email', UI.input('', 'name@kanzmarket.sa'))}
+        ${UI.field('Role', UI.select(['Branch Manager', 'Operations', 'Finance', 'Admin'], 'Branch Manager'), 'Operations, Finance and Admin reach every branch')}
+        ${UI.note('Scope comes from permission.', 'They sign in with their email and see only the branches listed here. There is no branch picker.', MER.PAL.vodka)}`,
+        { footer: UI.btn('Grant access', { kind: 'primary', act: 'brAccessGrant', arg: bid }) + UI.btn('Cancel', { act: 'closeDrawer' }) });
+      STATE.brPick = null;
+    },
+    brAccessPick: (a, el) => { STATE.brPick = el.value; },
+    brAccessGrant: bid => {
+      const pick = STATE.brPick, d = D();
+      const m = pick && pick !== 'Invite someone new' ? d.TEAM.find(x => pick.startsWith(x.n)) : null;
+      if (m) { m.sc.push(bid); UI.toast(m.n + ' can now see ' + d.branch(bid).name); }
+      else UI.toast('Invitation sent — they get access to ' + d.branch(bid).name + ' when they accept');
+      UI.closeDrawer(); render();
+    },
+    scrollTo: id => {
+      const el = document.getElementById(id), v = document.getElementById('view');
+      if (!el) return;
+      const top = el.getBoundingClientRect().top - v.getBoundingClientRect().top + v.scrollTop - 12;
+      if (v.scrollHeight > v.clientHeight) v.scrollTo({ top, behavior: 'smooth' });
+      else window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 70, behavior: 'smooth' });
+    },
+
     /* customers */
     toggleFlag: id => {
       const c = D().customer(id);

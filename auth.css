@@ -101,6 +101,7 @@ body.authing .app{display:none}
   font:500 10.5px var(--a-body);color:var(--a-dim);cursor:pointer}
 .auth-demo-b button:hover{border-color:#0B0B0B;color:#0B0B0B}
 .auth-demo-b button.on{background:#0B0B0B;border-color:#0B0B0B;color:#fff}
+.auth-alt{margin-top:16px;font-size:12px;color:var(--a-dim)}
 .auth-note{margin-top:11px;font-size:11px;line-height:1.55;color:var(--a-faint)}
 
 @media (max-width:900px){

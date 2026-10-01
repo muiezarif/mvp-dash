@@ -22,8 +22,9 @@ window.SCREENS = window.SCREENS || {};
         ['First order sent', 'DX-10044 · 12 August 2024', true]
       ];
       return U.page('Onboarding and verification', `${d.BIZ.legal} · verified account`,
+        U.btn('Preview new-merchant signup', { act: 'onbPreview', arg: 'flow' }) + U.btn('Preview status page', { act: 'onbPreview', arg: 'status' }) +
         U.btn('Download verification letter', { act: 'stub', arg: 'PDF letter downloaded' })) + `
-        ${U.note('Verified — full access.', 'Before verification an account is read-only: you can log in, configure settings and invite your team, but you cannot create orders, connect a 3PL or use the API.', '#1f8a4c')}
+        ${U.note('Verified — full access.', 'Before verification the dashboard is locked. A new merchant only sees their verification status page, where they follow the review, answer Dash’s requests and contact the onboarding team.', '#1f8a4c')}
         ${U.panel('Progress', `<div class="steps">${steps.map(([t, s, done], i) => `
           <div class="stp ${done ? 'done' : ''}"><span class="stp-n">${done ? '✓' : i + 1}</span>
             <div><b>${t}</b><em>${s}</em></div></div>`).join('')}</div>`, { pad: false })}
@@ -42,8 +43,8 @@ window.SCREENS = window.SCREENS || {};
         </div>
         ${U.panel('If Dash rejects a submission', U.defs([
           ['What you see', 'The reason Dash recorded, in plain words, on this page'],
-          ['What still works', 'Login, browsing, settings, inviting your team'],
-          ['What is blocked', 'Creating orders, 3PL connections, the API, the Marketplace'],
+          ['What still works', 'Signing in, the status page, messaging the onboarding team'],
+          ['What is blocked', 'The whole dashboard: orders, branches, 3PLs, plugins, the API'],
           ['Resubmission', 'Unlimited — upload a corrected document and the queue picks it up again']
         ]))}`;
     }
@@ -313,11 +314,7 @@ window.SCREENS = window.SCREENS || {};
         </table></div>`, { pad: false })}
         ${U.panel('Team', U.table(
           [{ t: 'Member' }, { t: 'Email' }, { t: 'Role' }, { t: 'Scope' }, { t: 'Two factor' }, { t: 'Last active' }, { t: '', w: '160px' }],
-          [['Sara Al Fahad', 'sara@kanzmarket.sa', 'Admin', 'All branches', true, 'Now'],
-           ['Yasser Al Otaibi', 'yasser@kanzmarket.sa', 'Branch Manager', 'Kanz — Hittin', true, '12 min ago'],
-           ['Nada Al Harbi', 'nada@kanzmarket.sa', 'Branch Manager', 'Kanz — Al Yasmin', false, '40 min ago'],
-           ['Mishal Al Qassim', 'mishal@kanzmarket.sa', 'Operations', 'All branches', true, '4 min ago'],
-           ['Noura Al Saleh', 'noura@kanzmarket.sa', 'Finance', 'All branches', true, '2 h ago']]
+          MER.TEAM.map(m => [m.n, m.e, m.r, m.sc === 'all' ? 'All branches' : m.sc.map(x => MER.branch(x).name).join(', '), m.fa, m.t])
             .map(([n, e, r, sc, f, t]) => ({ cells: [
               `<div class="who sm">${U.avatar(n)}<span>${U.esc(n)}</span></div>`, e,
               U.tag(r, MER.PAL.lav), U.esc(sc),
@@ -332,7 +329,7 @@ window.SCREENS = window.SCREENS || {};
     render() {
       const d = D();
       return U.page('Developer settings', 'Keys, webhooks and logs. Documentation lives in the public Developer Portal',
-        U.btn('Generate key', { kind: 'primary', act: 'genKey' }) + U.btn('Open documentation', { act: 'stub', arg: 'Opens the Dash Developer Portal' })) + `
+        U.btn('Generate key', { kind: 'primary', act: 'genKey' }) + '<a class="btn" href="Dash Website.dc.html#/developers" target="_blank" rel="noopener">Open API docs ↗</a>') + `
         <div class="cols c-2-1">
           <div class="stack">
             ${U.panel('API keys', U.table(

@@ -46,6 +46,7 @@
         '<a class="auth-link" href="#" id="au-forgot">Forgot password</a></div>' +
       '<button class="auth-btn" id="au-go">' + (blocked ? 'Continue' : C.cta) + '</button>' +
       (C.sso ? '<div class="auth-or">or</div><button class="auth-btn ghost" id="au-sso">' + C.sso + '</button>' : '') +
+      (C.onSignup ? '<div class="auth-alt">New to Dash? <a class="auth-link" href="#" id="au-signup">Create a merchant account</a></div>' : '') +
       demo() + '</div>';
   }
 
@@ -106,7 +107,10 @@
     if (q('au-verify')) q('au-verify').addEventListener('click', verify);
     if (q('au-back')) q('au-back').addEventListener('click', () => { step = 'signin'; err = ''; paint(); });
     if (q('au-back2')) q('au-back2').addEventListener('click', () => { step = 'signin'; err = ''; paint(); });
-    if (q('au-enter')) q('au-enter').addEventListener('click', enter);
+    if (q('au-enter')) q('au-enter').addEventListener('click', () => {
+      if (C.onBlocked) { const acc = find(email); hide(); C.onBlocked(acc); } else enter();
+    });
+    if (q('au-signup')) q('au-signup').addEventListener('click', ev => { ev.preventDefault(); hide(); C.onSignup(); });
     host.querySelectorAll('.auth-demo-b button').forEach(b =>
       b.addEventListener('click', () => { email = b.getAttribute('data-em'); err = ''; step = 'signin'; paint(); }));
   }
@@ -158,6 +162,13 @@
     const live = top.querySelector('.top-live');
     live ? top.insertBefore(w, live) : top.appendChild(w);
   }
+
+  /* hand the screen to another flow (onboarding) without revealing the app */
+  function hide() { if (host) { host.remove(); host = null; } }
+  window.AUTH = {
+    show: () => { step = 'signin'; err = ''; if (!host) mount(); },
+    enterAs: em => { if (em) email = em; else email = C.accounts[0].email; if (!host) { host = document.createElement('div'); document.body.appendChild(host); } enter(); }
+  };
 
   function mount() {
     document.body.classList.add('authing');

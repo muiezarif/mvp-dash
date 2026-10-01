@@ -38,6 +38,7 @@
 <script src="merchant/screens-dispatch.js"></script>
 <script src="merchant/screens-admin.js"></script>
 <script src="merchant/deep.js"></script>
+<script src="merchant/onboarding.js"></script>
 <script src="merchant/app.js"></script>
 <script>window.AUTH_CFG = {
   key:'merchant', product:'MERCHANT', accent:'#FFCC99',
@@ -51,6 +52,8 @@
   desc:'One email, one scope. What you can see is already decided by the permission your organisation gave you.',
   emailHint:'Your email tells us the merchant and the branches you cover. Nothing to choose.',
   sso:'Continue with Google Workspace', twofa:false,
+  onSignup: () => ONB.open(0),
+  onBlocked: a => { if (a && a.state === 'pending') ONB.status('details'); },
   accounts:[
     { email:'ops@kanzmarket.sa', label:'All branches', state:'ok', name:'Salma Al Dossari', role:'Operations manager',
       scope:[['Merchant','Kanz Trading Company · Kanz Market'],['Branches','All four — Hittin, Al Yasmin, Olaya, Al Malqa'],
@@ -59,14 +62,14 @@
       scope:[['Merchant','Kanz Trading Company · Kanz Market'],['Branches','Olaya only'],
         ['Role','Branch manager — create and watch his own orders'],['Cannot','See other branches, or change dispatch rules']] },
     { email:'ops@tamrapharmacy.sa', label:'Pending verification', state:'pending', name:'Tamra Pharmacy', role:'Owner',
-      scope:[['Merchant','Tamra Trading · Tamra Pharmacy'],['Signed up','29 Aug 2026'],['Documents','Two of four received']] },
+      scope:[['Merchant','Tamra Trading · Tamra Pharmacy'],['Submitted','29 Aug 2026'],['Review','Dash asked for two corrected documents']] },
     { email:'ops@nuqta.sa', label:'Suspended', state:'suspended', name:'Nuqta Coffee', role:'Owner',
       scope:[['Merchant','Nuqta Coffee Roasters'],['Suspended','24 Aug 2026'],['Reason','Wallet balance SAR −320']] }],
   states:{
     pending:{ eyebrow:'Account not verified yet', title:'Almost there', tone:'warn',
-      body:'Your account exists and you can sign in, but sending orders is switched off until Dash verifies the business. Two documents are still outstanding.',
-      list:['Commercial registration — received','VAT certificate — received','Municipality licence — waiting','Bank letter — waiting'],
-      enter:'Continue to document upload', note:'Verification usually takes under a working day once all four are in.' },
+      body:'Tamra Pharmacy is waiting on Dash verification. The dashboard stays locked until then; you can follow the review, answer Dash’s requests and message the onboarding team.',
+      list:['Commercial registration — accepted','VAT certificate — accepted','Municipality licence — needs replacing','Bank letter — needs replacing'],
+      enter:'See verification status', note:'Verification usually takes under a working day once everything is in.' },
     suspended:{ eyebrow:'Account suspended', title:'Suspended', tone:'stop',
       body:'Nuqta Coffee was suspended on 24 August. Orders already in flight finished normally, but nothing new can be sent and sign in is blocked until the wallet balance is settled.',
       list:['Outstanding to Dash — SAR 320','Contact — finance@dash.sa'],

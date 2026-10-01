@@ -309,6 +309,26 @@ window.STATE = window.STATE || {};
               ['Status', U.tag(b.status, b.status === 'Open' ? '#1f8a4c' : d.PAL.peach, { solid: b.status !== 'Open' })],
               ['Coordinates', b.pos[0].toFixed(4) + ', ' + b.pos[1].toFixed(4)]
             ]), { right: U.btn('Change hours', { act: 'stub', arg: 'Business hours per day of week' }) })}
+            ${(() => {
+              const people = d.TEAM.filter(m => m.sc === 'all' || m.sc.includes(b.id));
+              const scoped = people.filter(m => m.sc !== 'all').length;
+              return U.panel('People with access · ' + people.length, U.table(
+                [{ t: 'Member' }, { t: 'Role' }, { t: 'Access' }, { t: 'What they can do here' }, { t: 'Two factor' }, { t: 'Last active' }, { t: '', w: '150px' }],
+                people.map(m => ({ cells: [
+                  `<div class="who sm">${U.avatar(m.n)}<span>${U.esc(m.n)}<em>${U.esc(m.e)}</em></span></div>`,
+                  U.tag(m.r, d.PAL.lav),
+                  m.sc === 'all' ? '<em class="sub">Whole organisation</em>'
+                    : m.sc.length === 1 ? U.tag('This branch only', d.PAL.peach, { solid: true })
+                    : U.tag('This + ' + (m.sc.length - 1) + ' other', d.PAL.peach) + ' <em class="sub">' + m.sc.filter(x => x !== b.id).map(x => d.branch(x).code).join(', ') + '</em>',
+                  '<span class="sub">' + U.esc(d.ROLE_CAN[m.r] || '') + '</span>',
+                  m.fa ? U.tag('On', '#1f8a4c') : U.tag('Off', d.PAL.tang, { solid: true }), m.t,
+                  '<div class="rowact">' + (m.sc === 'all'
+                    ? U.btn('Manage in roles', { act: 'go', arg: '/roles' })
+                    : U.btn('Remove from branch', { kind: 'danger', act: 'brAccessRemove', arg: b.id + '|' + m.e })) + '</div>'] }))),
+                { pad: false, right: U.btn('Give access', { kind: 'primary', act: 'brAccessAdd', arg: b.id }) }) +
+                U.note(scoped + ' scoped to this branch, ' + (people.length - scoped) + ' organisation-wide.',
+                  'Organisation-wide roles reach every branch automatically; remove them from Roles and permissions, not here.', d.PAL.vodka);
+            })()}
             ${U.panel('Orders from this branch', U.table(
               [{ t: 'Order' }, { t: 'Customer' }, { t: 'Provider' }, { t: 'Status' }, { t: 'Charge', num: true }, { t: 'Created' }],
               orders.map(o => ({ act: 'go', arg: '/orders/' + o.id, cells: [

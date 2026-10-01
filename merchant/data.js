@@ -22,6 +22,24 @@ window.MER = (function () {
       hours:'09:00 – 22:00', mgr:'Rana Al Zahrani', orders:11, onTime:88, avgMin:41, spend:1620, status:'Reduced hours' }
   ];
 
+  /* Who can sign in, and which branches they reach. 'all' = organisation-wide role. */
+  const TEAM = [
+    { n:'Sara Al Fahad', e:'sara@kanzmarket.sa', r:'Admin', sc:'all', fa:true, t:'Now' },
+    { n:'Mishal Al Qassim', e:'mishal@kanzmarket.sa', r:'Operations', sc:'all', fa:true, t:'4 min ago' },
+    { n:'Noura Al Saleh', e:'noura@kanzmarket.sa', r:'Finance', sc:'all', fa:true, t:'2 h ago' },
+    { n:'Yasser Al Otaibi', e:'yasser@kanzmarket.sa', r:'Branch Manager', sc:['b1'], fa:true, t:'12 min ago' },
+    { n:'Nada Al Harbi', e:'nada@kanzmarket.sa', r:'Branch Manager', sc:['b2'], fa:false, t:'40 min ago' },
+    { n:'Omar Sabri', e:'olaya@kanzmarket.sa', r:'Branch Manager', sc:['b3'], fa:true, t:'8 min ago' },
+    { n:'Rana Al Zahrani', e:'rana@kanzmarket.sa', r:'Branch Manager', sc:['b4'], fa:true, t:'1 h ago' },
+    { n:'Khalid Al Mutairi', e:'khalid@kanzmarket.sa', r:'Branch Manager', sc:['b1','b4'], fa:false, t:'Yesterday' }
+  ];
+  const ROLE_CAN = {
+    'Admin':'Everything, including billing, team and API keys',
+    'Operations':'Create, watch and escalate orders; edit dispatch rules',
+    'Finance':'Billing, settlement and reports; no order actions',
+    'Branch Manager':'Create and watch this branch’s orders and customers'
+  };
+
   /* Connected 3PLs and Dash Network as a provider */
   const PROVIDERS = [
     { id:'p0', name:'Dash Network', kind:'Network', logo:'DN', zones:'All Riyadh', onTime:95, accept:99, avgPickup:12,
@@ -278,7 +296,7 @@ window.MER = (function () {
     ]
   };
 
-  return { PAL, BIZ, CITIES, BRANCHES, PROVIDERS, DISPATCH, INTEGRATIONS, CUSTOMERS, STATUS, FLOW, ORDERS,
+  return { TEAM, ROLE_CAN, PAL, BIZ, CITIES, BRANCHES, PROVIDERS, DISPATCH, INTEGRATIONS, CUSTOMERS, STATUS, FLOW, ORDERS,
            WALLET, PLANS, NOTIFS, AUDIT, TICKETS, REPORTS,
            dispatchFor,
            branch: id => BRANCHES.find(b => b.id === id),

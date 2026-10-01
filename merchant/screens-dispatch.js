@@ -255,7 +255,10 @@ window.SCREENS = window.SCREENS || {};
       const d = D();
       const conn = d.INTEGRATIONS.filter(i => i.status === 'Connected');
       const bad = conn.filter(i => i.health === 'Degraded');
-      return U.page('Integrations', 'How orders get into Dash — a connector, your own API, or typed in',
+      const plugins = d.INTEGRATIONS.filter(i => i.kind === 'Platform connector');
+      const api = d.INTEGRATIONS.filter(i => i.kind === 'API integration');
+      const manual = d.INTEGRATIONS.find(i => i.kind === 'Dashboard') || { orders: 0 };
+      return U.page('Integrations', 'Three ways to get orders into Dash: a plugin, the Dash API, or typed in',
         U.btn('Developer settings', { act: 'go', arg: '/developer' })) + `
         <div class="kpis k-4">
           ${U.kpi('Connected sources', conn.length, 'Feeding orders right now', d.PAL.lav)}
@@ -264,14 +267,37 @@ window.SCREENS = window.SCREENS || {};
           ${U.kpi('Needs attention', bad.length, bad.length ? U.esc(bad[0].n) + ' is failing' : 'All clear', d.PAL.tang)}
         </div>
         ${bad.length ? U.note(U.esc(bad[0].n) + ' is degraded.', U.esc(bad[0].note) + ' Orders may be arriving late or not at all. ' + U.btn('View logs', { act: 'go', arg: '/developer' }), d.PAL.tang) : ''}
-        ${U.note('Connectors are built and released by Dash.', 'You install one; you do not maintain it. When a platform changes its API, Dash ships the fix.', d.PAL.vodka)}
-        <div class="cols c-3">
-          ${d.INTEGRATIONS.map(i => `
+        <div class="ways">
+          <section class="way" style="--wc:${d.PAL.lav}">
+            <div class="way-h"><span class="way-n">Option 1 · no code</span>${U.tag(plugins.filter(i => i.status === 'Connected').length + ' connected', '#1f8a4c')}</div>
+            <div class="way-t">Install a plugin</div>
+            <div class="way-d">Your storefront already runs on one of these. Install the Dash plugin and every checkout becomes a Dash order. Built and maintained by Dash.</div>
+            <div class="way-l">${plugins.map(i => U.tag(i.n, i.status === 'Connected' ? '#1f8a4c' : '#c9c9c9')).join('')}</div>
+            <div class="way-a">${U.btn('Browse plugins', { kind: 'primary', act: 'scrollTo', arg: 'int-plugins' })}</div>
+          </section>
+          <section class="way" style="--wc:${d.PAL.peach}">
+            <div class="way-h"><span class="way-n">Option 2 · for developers</span>${U.tag(api.length + ' connected', '#1f8a4c')}</div>
+            <div class="way-t">Use the Dash API</div>
+            <div class="way-d">For your own ERP, POS or custom storefront. Create orders over REST and get every status change back by webhook.</div>
+            <div class="way-l">${U.tag('REST', d.PAL.peach)}${U.tag('Webhooks', d.PAL.peach)}${U.tag('Sandbox key', d.PAL.peach)}</div>
+            <div class="way-a"><a class="btn primary" href="Dash Website.dc.html#/developers" target="_blank" rel="noopener">Read the API docs ↗</a>${U.btn('Get API keys', { act: 'go', arg: '/developer' })}</div>
+          </section>
+          <section class="way" style="--wc:${d.PAL.flax}">
+            <div class="way-h"><span class="way-n">Option 3 · by hand</span>${U.tag('Always on', d.PAL.flax, { solid: true })}</div>
+            <div class="way-t">Type it in</div>
+            <div class="way-d">Phone orders and walk-ins. Branch staff create the order in the dashboard; nothing to connect.</div>
+            <div class="way-l">${U.tag(manual.orders + ' this month', d.PAL.flax)}</div>
+            <div class="way-a">${U.btn('Create an order', { act: 'go', arg: '/create-order' })}</div>
+          </section>
+        </div>
+        ${U.note('Use any mix.', 'Every route lands in the same order list and follows the same dispatch rules. Kanz uses two plugins and the API today.', d.PAL.vodka)}
+        <div id="int-plugins">${U.panel('Plugins · ' + plugins.length, `<div class="cols c-3" style="padding:12px">
+          ${plugins.map(i => `
             <section class="panel provcard">
               <div class="pc-h">
                 <span class="av lg">${U.esc(i.n.slice(0, 2).toUpperCase())}</span>
-                <div><b>${U.esc(i.n)}</b><em>${i.kind}</em></div>
-                ${U.tag(i.status, i.status === 'Connected' ? '#1f8a4c' : i.status === 'Always on' ? d.PAL.flax : d.PAL.lav, { solid: i.status !== 'Connected' })}
+                <div><b>${U.esc(i.n)}</b><em>Dash plugin · install from the ${U.esc(i.n)} app store</em></div>
+                ${U.tag(i.status, i.status === 'Connected' ? '#1f8a4c' : d.PAL.lav, { solid: i.status !== 'Connected' })}
               </div>
               <div style="padding:0 13px 4px">${U.defs([
                 ['Orders this month', i.orders.toLocaleString()],
@@ -281,11 +307,23 @@ window.SCREENS = window.SCREENS || {};
               <div class="pc-n">${U.esc(i.note)}</div>
               <div class="pc-a">
                 ${i.status === 'Connected' ? U.btn('Sync settings', { act: 'syncSettings', arg: i.id }) + U.btn('Disconnect', { kind: 'danger', act: 'disconnectInt', arg: i.id })
-                  : i.status === 'Available' ? U.btn('Connect', { kind: 'primary', act: 'connectInt', arg: i.id })
-                  : U.btn('Create an order', { act: 'go', arg: '/create-order' })}
+                  : U.btn('Install plugin', { kind: 'primary', act: 'connectInt', arg: i.id })}
               </div>
             </section>`).join('')}
-        </div>
+        </div>`, { pad: false, right: '<span class="ph-note">Nothing to build · Dash ships the updates</span>' })}</div>
+        ${U.panel('Dash API', `
+          <div class="qs">
+            <div><span>01</span><b>Get a key</b><em>Sandbox and live keys in Developer settings</em></div>
+            <div><span>02</span><b>Create orders</b><em>POST /v1/orders from your system</em></div>
+            <div><span>03</span><b>Listen for updates</b><em>Webhooks for every status change</em></div>
+          </div>
+          <pre class="code">curl https://api.dash.sa/v1/orders \\
+  -H "Authorization: Bearer dsh_test_…" \\
+  -d branch=HTN -d customer_phone=+966502201188 \\
+  -d address="Al Yasmin, Riyadh" -d type=on_demand</pre>
+          ${api.map(i => `<div class="onb-doc" style="border-top:1px solid var(--line2)"><div><b>${U.esc(i.n)}</b><em>Your API connection · ${i.orders.toLocaleString()} orders this month · last call ${U.esc(i.synced)}</em></div>
+            ${U.tag(i.health, i.health === 'Healthy' ? '#1f8a4c' : d.PAL.tang, { solid: i.health !== 'Healthy' })}</div>`).join('')}`,
+          { pad: false, right: '<a class="btn" href="Dash Website.dc.html#/developers" target="_blank" rel="noopener">API docs ↗</a>' })}
         ${U.panel('Connection health', U.table(
           [{ t: 'Source' }, { t: 'Connection' }, { t: 'State' }, { t: 'Last successful sync' }, { t: 'Orders that failed to arrive', num: true },
            { t: 'What went wrong' }, { t: 'Dash → you' }, { t: '', w: '190px' }],
