@@ -363,6 +363,8 @@
         ${UI.field('Shift', UI.select(D().SHIFTS.map(s => s.name + ' · ' + s.window), 'Morning · 07:30 – 15:30'))}
         ${UI.field('Vehicle', UI.select(['RYD 4406 — Toyota Corolla (available)', 'Assign later'], 'RYD 4406 — Toyota Corolla (available)'))}
         ${UI.field('Payment model', UI.select(['Per order', 'Salary'], 'Per order'))}
+        ${UI.field('IBAN', UI.input('', 'SA00 0000 0000 0000 0000 0000'), 'Earnings are paid here by bank transfer')}
+        ${UI.field('Bank', UI.select(['Al Rajhi Bank', 'Saudi National Bank', 'Riyad Bank', 'Alinma Bank', 'Saudi Awwal Bank'], 'Al Rajhi Bank'))}
       </div>
       ${UI.note('Documents next.', 'After saving, upload the licence and insurance — the driver app stays locked until both are valid.', D().PAL.lemon)}`,
       { footer: UI.btn('Save and invite to app', { kind: 'primary', act: 'inviteDriver' }) }),

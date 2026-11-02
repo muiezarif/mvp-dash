@@ -373,10 +373,13 @@ window.DEEP = (function () {
           ({ Unsettled: 'still accruing this period', Ready: 'closed and waiting for payment', Settled: 'paid and reconciled', Disputed: 'held until the dispute closes' }[st]) + '</span></button>';
       }).join('') + '</div>';
 
-      return U.page('Operational settlement',
-        'One financial record per order. Merchant receivable, driver and supply payable, COD — every product reads these numbers',
+      const tab = STATE.settleTab || 'Overview';
+      const head = U.page('Settlement',
+        'Who owes you, who you owe, and when. Merchants pay you, you pay drivers, and Dash Network runs both ways',
         U.btn('Close current period', { kind: 'primary', act: 'closePeriod' }) +
-        U.btn('Export statements', { act: 'export', arg: 'settlement statements' })) +
+        U.btn('Export statements', { act: 'export', arg: 'settlement statements' })) + LEDGER.tabs(tab);
+      if (tab !== 'Per-order records') return head + LEDGER.body(tab);
+      return head +
         stateCards +
         U.filters([
           fg('State', U.select(['All states'].concat(states), f.state, { act: 'setF', arg: 'state' })),

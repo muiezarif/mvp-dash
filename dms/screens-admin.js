@@ -21,6 +21,7 @@ window.SCREENS = window.SCREENS || {};
         ['Network and Marketplace', 'Supply and Demand approved · listing live', true]
       ];
       return U.page('Onboarding and verification', 'Rehla Fleet · verified account',
+        U.btn('Preview sign-up flow', { act: 'onbPreview', arg: 'flow' }) + U.btn('Preview pending status', { act: 'onbPreview', arg: 'status' }) +
         U.btn('Download verification letter', { act: 'stub', arg: 'PDF letter' })) + `
         ${U.note('Verified — full access.', 'Before verification an account can log in, look around and configure settings, but cannot create records, join Dash Network or use the Marketplace.', '#1f8a4c')}
         ${U.panel('Progress', `<div class="steps">${steps.map(([t, s, done], i) => `

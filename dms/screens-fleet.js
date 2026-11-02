@@ -68,8 +68,9 @@ window.SCREENS = window.SCREENS || {};
             ['Group', U.esc(d.GROUPS.find(g => g.id === x.group).name)],
             ['Shift', d.SHIFTS.find(s => s.id === x.shift).name + ' · ' + d.SHIFTS.find(s => s.id === x.shift).window],
             ['Vehicle', `<a href="#/vehicles">${v.plate} — ${v.model}</a>`],
-            ['Availability', U.tag(x.status, sc(x.status)) + (x.online ? ` <em class="sub">online since ${x.since}</em>` : ' <em class="sub">offline</em>')]
-          ]))}
+            ['Availability', U.tag(x.status, sc(x.status)) + (x.online ? ` <em class="sub">online since ${x.since}</em>` : ' <em class="sub">offline</em>')],
+            ['Paid to', PAYOUT.row(x)]
+          ]), { right: U.btn('Change shift, group, zone', { act: 'drvAssign', arg: x.id }) })}
           ${U.panel('Performance', `
             <div class="kpis k-2 tight">
               ${U.kpi('Total deliveries', x.deliveries.toLocaleString(), 'Lifetime', d.PAL.lav)}
@@ -106,6 +107,7 @@ window.SCREENS = window.SCREENS || {};
         ${U.note('Contract drives payout, not dispatch.', 'Assignment never reads the contract — a salaried and a per-order driver are treated identically by the routing rules.', d.PAL.lav)}`;
 
       const wallet = `
+        ${PAYOUT.panel(x)}
         <div class="kpis k-4">
           ${U.kpi('Earned this period', U.money(x.wallet.earned), x.contract.model, d.PAL.flax)}
           ${U.kpi('Paid out', U.money(x.wallet.payouts), x.contract.terms, d.PAL.lav)}
@@ -198,7 +200,7 @@ window.SCREENS = window.SCREENS || {};
                       ['Orders this week', g.orders], ['On time', `${g.onTime}% ${U.bar(g.onTime, g.onTime >= 95 ? d.PAL.lav : d.PAL.peach)}`]])}
             <div class="sub-h">Members</div>
             <div class="members">${g.drivers.map(id => `<a class="mem" href="#/drivers/${id}">${U.avatar(d.driver(id).name)}<span>${U.esc(d.driver(id).name)}<em>${d.zone(d.driver(id).zone).code} · ${d.driver(id).completion}%</em></span></a>`).join('')}</div>
-            <div class="btnrow">${U.btn('Add driver', { act: 'stub', arg: 'Add driver to group' })}${U.btn('Group report', { act: 'go', arg: '/reports' })}</div>`)).join('')}
+            <div class="btnrow">${U.btn('Add drivers', { act: 'memPick', arg: 'group|' + g.id })}${U.btn('Group report', { act: 'go', arg: '/reports' })}</div>`)).join('')}
         </div>
         ${U.note('Groups are a reporting and assignment lens.', 'A driver belongs to exactly one group, so group reports never double-count. Assignment rules can be scoped to a group — for example, bulk orders only to Vans &amp; bulk.', d.PAL.lav)}`;
     }
@@ -228,12 +230,12 @@ window.SCREENS = window.SCREENS || {};
             }).join('')}
           </div>`)}
         ${U.panel('', U.table(
-          [{ t: 'Shift' }, { t: 'Window' }, { t: 'Drivers', num: true }, { t: 'Auto online' }, { t: 'Orders this week', num: true }, { t: 'On time', w: '130px' }, { t: '', w: '190px' }],
+          [{ t: 'Shift' }, { t: 'Window' }, { t: 'Drivers', num: true }, { t: 'Auto online' }, { t: 'Orders this week', num: true }, { t: 'On time', w: '130px' }, { t: '', w: '200px' }],
           d.SHIFTS.map(s => ({ cells: [
             `<b>${s.name}</b>`, s.window, s.drivers.length,
             U.toggle(s.auto, 'shiftAuto', s.id),
             s.orders, `${s.onTime}% ${U.bar(s.onTime, s.onTime >= 95 ? d.PAL.lav : d.PAL.peach)}`,
-            `<div class="rowact">${U.btn('Roster', { act: 'shiftRoster', arg: s.id })}${U.btn('Report', { act: 'go', arg: '/reports' })}</div>`] }))), { pad: false })}
+            `<div class="rowact">${U.btn('Drivers', { kind: 'primary', act: 'memPick', arg: 'shift|' + s.id })}${U.btn('Report', { act: 'go', arg: '/reports' })}</div>`] }))), { pad: false })}
         ${U.note('Auto online links the shift to the driver app.', 'With it on, a driver goes online when their shift starts and offline when it ends — the manual toggle in the app is disabled. Night shift is manual because cover is on call.', d.PAL.lav)}`;
     }
   };

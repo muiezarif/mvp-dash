@@ -33,7 +33,7 @@ window.SCREENS = window.SCREENS || {};
                 ['On time', `${z.onTime}% ${U.bar(z.onTime, z.color)}`],
                 ['Avg pickup', z.avgPickup + ' min']
               ])}
-              <div class="btnrow">${U.btn('Focus', { act: 'focusZone', arg: z.id })}${U.btn(z.status === 'Active' ? 'Pause zone' : 'Resume zone', { act: 'toggleZone', arg: z.id })}${U.btn('Edit shape', { act: 'stub', arg: 'Drag vertices to reshape ' + z.code })}</div>`)).join('')}
+              <div class="btnrow">${U.btn('Drivers', { act: 'memPick', arg: 'zone|' + z.id })}${U.btn('Focus', { act: 'focusZone', arg: z.id })}${U.btn(z.status === 'Active' ? 'Pause zone' : 'Resume zone', { act: 'toggleZone', arg: z.id })}${U.btn('Edit shape', { act: 'stub', arg: 'Drag vertices to reshape ' + z.code })}</div>`)).join('')}
           </div>
         </div>
         ${U.panel('Zone reporting', U.table(

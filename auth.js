@@ -46,7 +46,7 @@
         '<a class="auth-link" href="#" id="au-forgot">Forgot password</a></div>' +
       '<button class="auth-btn" id="au-go">' + (blocked ? 'Continue' : C.cta) + '</button>' +
       (C.sso ? '<div class="auth-or">or</div><button class="auth-btn ghost" id="au-sso">' + C.sso + '</button>' : '') +
-      (C.onSignup ? '<div class="auth-alt">New to Dash? <a class="auth-link" href="#" id="au-signup">Create a merchant account</a></div>' : '') +
+      (C.onSignup ? '<div class="auth-alt">New to Dash? <a class="auth-link" href="#" id="au-signup">' + (C.signupLabel || 'Create a merchant account') + '</a></div>' : '') +
       demo() + '</div>';
   }
 

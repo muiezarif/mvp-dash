@@ -40,6 +40,8 @@
 <script src="dms/screens-network.js"></script>
 <script src="dms/screens-admin.js"></script>
 <script src="dms/deep.js"></script>
+<script src="dms/onboarding.js"></script>
+<script src="dms/fleet-ext.js"></script>
 <script src="dms/app.js"></script>
 <script>window.AUTH_CFG = {
   key:'dms', product:'DMS', accent:'#C0D2FF',
@@ -53,6 +55,9 @@
   desc:'Your role decides which board you land on. A dispatcher opens the control tower; a finance user opens billing.',
   emailHint:'Your email resolves the company, the role and the zones you dispatch for.',
   sso:'Continue with single sign on', twofa:false,
+  signupLabel:'Register your fleet',
+  onSignup: () => ONB.open(0),
+  onBlocked: a => { if (a && a.state === 'pending') ONB.status('details'); },
   accounts:[
     { email:'dispatch@rehlafleet.sa', label:'Dispatcher', state:'ok', name:'Maha Al Qahtani', role:'Dispatcher',
       scope:[['Company','Rehla Fleet Company'],['Role','Dispatcher — assign, reassign, cancel, contact drivers'],
@@ -61,12 +66,12 @@
       scope:[['Company','Rehla Fleet Company'],['Role','Finance — invoices, driver wallets, payouts'],
         ['Zones','Reporting across all zones'],['Cannot','Touch a live order or reassign a driver']] },
     { email:'ops@tayarexpress.sa', label:'Pending verification', state:'pending', name:'Tayar Express', role:'Owner',
-      scope:[['Company','Tayar Express'],['Signed up','27 Aug 2026'],['Documents','One rejected']] }],
+      scope:[['Company','Tayar Express'],['Signed up','27 Aug 2026'],['Review','Dash asked for two corrected documents']] }],
   states:{
-    pending:{ eyebrow:'Verification blocked', title:'One document back', tone:'warn',
-      body:'Your commercial registration came through unreadable, so verification is on hold. Everything else was accepted. Rescan it and Dash reviews the same day.',
-      list:['Commercial registration — unreadable, resubmit','VAT certificate — accepted','Municipality licence — accepted'],
-      enter:'Continue to resubmit', note:'You can resubmit as many times as you need. Nothing else is affected.' }}
+    pending:{ eyebrow:'Account not verified yet', title:'Almost there', tone:'warn',
+      body:'Tayar Express is waiting on Dash verification. The DMS stays locked until then; you can follow the review, answer Dash’s requests and message the onboarding team.',
+      list:['Commercial registration — unreadable, resubmit','Fleet insurance — schedule incomplete','VAT certificate, transport licence, bank letter — in review'],
+      enter:'See verification status', note:'You can resubmit as many times as you need. Nothing else is affected.' }}
 };</script>
 <script src="auth.js"></script>
 </body>
